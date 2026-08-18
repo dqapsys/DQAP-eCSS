@@ -1,1 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DQAP eCSS Console — Simplex Support</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{--p:#006994;--pd:#004A68;--pl:#E4F1FA;--bg:#F4F6FA;--card:#fff;--t1:#111;--t2:#666;--bd:rgba(0,0,0,.11);--bds:rgba(0,0,0,.22);--rad:10px;--ok:#1B5E20;--warn:#E65100;--bad:#B71C1C;--oxide:#B5502F}
+  body{font-family:'DM Sans','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--t1);font-size:13px}
+  .container{max-width:1420px;margin:0 auto;padding:20px}
 
+  /* ---- login screen ---- */
+  .login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .login-card{width:min(380px,100%);background:#fff;border-radius:14px;border:.5px solid var(--bd);box-shadow:0 20px 50px rgba(0,0,0,.1);padding:32px 28px}
+  .login-card .lg-icon{width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,var(--p),var(--pd));color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:16px}
+  .login-card h1{font-size:19px;font-weight:800;margin-bottom:4px}
+  .login-card p{font-size:12px;color:var(--t2);margin-bottom:20px;line-height:1.5}
+  .login-card .form-group{margin-bottom:12px}
+  .login-card label{display:block;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+  .login-err{background:#FFEBEE;color:var(--bad);border-radius:7px;padding:9px 11px;font-size:11.5px;margin-bottom:12px;display:none}
+  .login-err.show{display:block}
+
+  /* ---- shared app chrome (mirrors CSS module) ---- */
+  .header{background:linear-gradient(135deg,var(--p),var(--pd));color:#fff;padding:26px 22px;border-radius:var(--rad);margin-bottom:16px;display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap}
+  .header h1{font-size:24px;margin-bottom:5px;display:flex;align-items:center;gap:10px;font-weight:700}
+  .header p{opacity:.9;font-size:12.5px}
+  .userbox{background:rgba(255,255,255,.18);padding:11px 14px;border-radius:8px;min-width:200px;display:flex;align-items:center;gap:10px}
+  .userbox .lbl{font-size:10px;opacity:.85;margin-bottom:3px;text-transform:uppercase;letter-spacing:.7px}
+  .userbox .nm{font-size:13px;font-weight:700}
+  .userbox .logout{background:rgba(255,255,255,.22);border:none;color:#fff;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700}
+
+  .tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+  .tab-btn{padding:9px 14px;border-radius:7px;border:1px solid var(--bds);background:var(--card);color:var(--t1);cursor:pointer;font-size:12px;font-weight:600;transition:all .15s;display:flex;align-items:center;gap:6px}
+  .tab-btn:hover{border-color:var(--p);background:var(--pl)}
+  .tab-btn.active{background:var(--oxide);color:#fff;border-color:var(--oxide)}
+  .tab-content{display:none}.tab-content.active{display:block}
+
+  .card{background:var(--card);border-radius:var(--rad);border:.5px solid var(--bd);padding:16px;margin-bottom:14px}
+  .card-header{font-size:13px;font-weight:700;margin:-16px -16px 14px;padding:12px 16px;border-bottom:.5px solid var(--bd);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:14px}
+  .stat{background:var(--card);border-radius:var(--rad);border:.5px solid var(--bd);padding:13px;display:flex;gap:11px;align-items:center}
+  .stat-icon{width:36px;height:36px;background:var(--pl);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--p);font-size:19px;flex-shrink:0}
+  .stat-value{font-size:20px;font-weight:700;color:var(--p)}
+  .stat-label{font-size:10px;color:var(--t2);text-transform:uppercase;letter-spacing:.4px}
+
+  table{width:100%;border-collapse:collapse}
+  th{padding:9px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;background:#f5f5f5;border-bottom:.5px solid var(--bd);color:var(--t2)}
+  td{padding:9px 10px;border-bottom:.5px solid var(--bd);vertical-align:top}
+  tr:hover td{background:#fafafa}
+  .table-wrap{overflow-x:auto}
+
+  .btn{padding:7px 12px;border-radius:7px;border:.5px solid var(--bds);background:transparent;color:var(--t1);cursor:pointer;font-size:12px;font-weight:600;transition:all .15s;display:inline-flex;align-items:center;gap:5px;font-family:inherit;white-space:nowrap}
+  .btn:hover{background:#f0f0f0}
+  .btn.primary{background:var(--oxide);color:#fff;border-color:var(--oxide)}
+  .btn.primary:hover{background:#944225}
+  .btn.ok{background:var(--ok);color:#fff;border-color:var(--ok)}
+  .btn.bad{color:var(--bad);border-color:#EF9A9A}
+  .btn.sm{padding:5px 9px;font-size:11px}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.block{width:100%;justify-content:center}
+
+  input,select,textarea{font-family:inherit;width:100%;padding:8px 10px;border:1px solid var(--bd);border-radius:7px;background:#fafafa;color:var(--t1);font-size:12.5px}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--p);background:#fff}
+  textarea{min-height:78px;resize:vertical}
+  .form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:12px}
+  .form-group label{display:block;font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+
+  .queue-layout{display:grid;grid-template-columns:390px minmax(0,1fr);gap:14px;align-items:start}
+  .ticket-list{display:flex;flex-direction:column;gap:8px;max-height:calc(100vh - 230px);overflow:auto}
+  .ticket-row{border:.5px solid var(--bd);background:#fff;border-radius:8px;padding:10px 12px;cursor:pointer}
+  .ticket-row:hover,.ticket-row.selected{border-color:var(--p);background:#F8FCFF}
+  .ticket-title{display:flex;justify-content:space-between;gap:8px;font-weight:700;font-size:12.5px}
+  .ticket-meta{font-size:11px;color:var(--t2);margin-top:4px;line-height:1.45}
+  .detail-box{min-height:420px}
+  .message{background:#fafafa;border:.5px solid var(--bd);border-left:3px solid var(--p);border-radius:8px;padding:11px 12px;margin:10px 0}
+  .message b{display:block;font-size:12px;margin-bottom:4px}
+  .message p{font-size:12.5px;line-height:1.55;white-space:pre-wrap}
+  .filters{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+  .filters .btn.active{background:var(--oxide);color:#fff;border-color:var(--oxide)}
+
+  .badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:700;white-space:nowrap}
+  .s-pending{background:#FFF3E0;color:#E65100}.s-started{background:#E3F2FD;color:#006994}.s-closed{background:#E8F5E9;color:#1B5E20}
+  .s-urgent{background:#FFEBEE;color:#B71C1C}.s-high{background:#FFF3E0;color:#E65100}.s-medium{background:#FFFDE7;color:#F57F17}
+
+  .muted{color:var(--t2);font-size:11px}.strong{font-weight:700}.empty{text-align:center;color:var(--t2);padding:30px 12px}
+  .toast{position:fixed;right:18px;bottom:18px;background:#1A237E;color:#fff;padding:10px 14px;border-radius:10px;font-size:12px;font-weight:600;z-index:9999;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+  .toast.error{background:var(--bad)}.toast.success{background:var(--ok)}
+
+  .attach-chip{display:inline-flex;align-items:center;gap:5px;background:var(--pl);color:var(--pd);border-radius:6px;padding:5px 9px;font-size:11.5px;text-decoration:none;margin:3px 6px 3px 0}
+  .attach-chip i{font-size:13px}
+
+  .spin{animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  @media(max-width:900px){.queue-layout{grid-template-columns:1fr}.ticket-list{max-height:330px}}
+  @media(max-width:720px){.container{padding:12px}.header{align-items:flex-start;flex-direction:column}.card{padding:12px}.card-header{margin:-12px -12px 12px;padding:10px 12px}}
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN SCREEN ===== -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-card">
+    <div class="lg-icon"><i class="ti ti-headset"></i></div>
+    <h1>DQAP eCSS Console</h1>
+    <p>DQAP Simplex Support — internal ticket console. Standalone from DORBIT; sign in with your eCSS team account.</p>
+    <div class="login-err" id="loginErr"></div>
+    <div class="form-group"><label>Email</label><input type="email" id="li-email" placeholder="name@dqapsys.com"></div>
+    <div class="form-group"><label>Password</label><input type="password" id="li-pass" placeholder="••••••••"></div>
+    <button class="btn primary block" id="loginBtn" onclick="doLogin()"><i class="ti ti-login"></i> Sign in</button>
+    <p style="margin-top:14px;font-size:11px;color:var(--t2);line-height:1.5">Accounts are created manually in the Firebase console for this project — there's no public sign-up. Contact Updesh if you need access.</p>
+  </div>
+</div>
+
+<!-- ===== APP ===== -->
+<div id="appContainer" class="container" style="display:none">
+  <div class="header">
+    <div><h1><i class="ti ti-headset"></i> DQAP eCSS Console</h1><p>DQAP Simplex Support — ticket queue, assignment, replies and closure tracking</p></div>
+    <div class="userbox"><div><div class="lbl">Signed in as</div><div class="nm" id="currentUserName">-</div></div><button class="logout" onclick="doLogout()"><i class="ti ti-logout"></i></button></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="dashboard" onclick="switchTab('dashboard')"><i class="ti ti-layout-dashboard"></i>Dashboard</button>
+    <button class="tab-btn" data-tab="tickets" onclick="switchTab('tickets')"><i class="ti ti-list-check"></i>Tickets</button>
+  </div>
+
+  <section id="tab-dashboard" class="tab-content active"></section>
+  <section id="tab-tickets" class="tab-content"></section>
+</div>
+
+<script>
+/* ============ CONFIG ============ */
+firebase.initializeApp({
+  apiKey: "AIzaSyCBRE0VlIjuRsW7JE22pVHsKimDwtrTSHE",
+  authDomain: "dqap-ecss.firebaseapp.com",
+  projectId: "dqap-ecss",
+  storageBucket: "dqap-ecss.firebasestorage.app",
+  messagingSenderId: "902896957641",
+  appId: "1:902896957641:web:f87299e984de72eb6e7518"
+});
+const auth = firebase.auth();
+const db = firebase.firestore();
+const TICKET_COL = 'ecss_tickets';
+
+// eCSS team — hardcoded for v1. Add/remove names here as the support roster changes.
+// (Move to a Firestore ecss_users collection later if this needs to be admin-editable.)
+const ECSS_TEAM = ['Updesh', 'Pratim', 'Chetan', 'Ravi', 'Keshav', 'Jawed/Shams'];
+
+let currentUser = null, ticketsData = [], ticketsUnsub = null, activeTab = 'dashboard', activeFilter = 'all', selectedTicketId = '';
+
+/* ============ HELPERS ============ */
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function el(id){return document.getElementById(id)}
+function g(id){return (el(id)?.value||'').trim()}
+function norm(s){return String(s||'').trim().toLowerCase()}
+function nowIso(){return new Date().toISOString()}
+function showToast(msg,type='success'){const t=document.createElement('div');t.className='toast '+(type==='error'?'error':'success');t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3200)}
+function fmtDate(v){const d=new Date(v||Date.now());return Number.isNaN(d.getTime())?'-':d.toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}
+function timeValue(v){const d=new Date(v||0);return Number.isNaN(d.getTime())?0:d.getTime()}
+function statusKey(s){return norm(s||'Pending')}
+function durationText(start,end){
+  if(!start||!end)return'-';
+  const mins=Math.round(Math.max(0,timeValue(end)-timeValue(start))/60000);
+  if(mins<60)return mins+' min';
+  const hrs=Math.floor(mins/60),rem=mins%60;
+  return hrs+' hr'+(hrs===1?'':'s')+(rem?' '+rem+' min':'');
+}
+function statusBadge(s){const k=statusKey(s);return `<span class="badge s-${k}">${esc(k.replace(/\b\w/g,m=>m.toUpperCase()))}</span>`}
+function priorityBadge(p){const k=norm(p||'Medium');return `<span class="badge s-${k}">${esc(String(p||'Medium').toUpperCase())}</span>`}
+function teamOptions(selected=''){return ECSS_TEAM.map(n=>`<option value="${esc(n)}" ${norm(n)===norm(selected)?'selected':''}>${esc(n)}</option>`).join('')}
+
+/* ============ AUTH ============ */
+function doLogin(){
+  const email=g('li-email'), pass=g('li-pass');
+  el('loginErr').classList.remove('show');
+  if(!email||!pass){el('loginErr').textContent='Enter both email and password.';el('loginErr').classList.add('show');return}
+  el('loginBtn').disabled=true;el('loginBtn').innerHTML='<i class="ti ti-loader-2 spin"></i> Signing in…';
+  auth.signInWithEmailAndPassword(email,pass).catch(err=>{
+    el('loginErr').textContent=err.code==='auth/invalid-credential'||err.code==='auth/wrong-password'||err.code==='auth/user-not-found'
+      ? 'Incorrect email or password.' : err.message;
+    el('loginErr').classList.add('show');
+    el('loginBtn').disabled=false;el('loginBtn').innerHTML='<i class="ti ti-login"></i> Sign in';
+  });
+}
+function doLogout(){ if(ticketsUnsub)ticketsUnsub(); auth.signOut(); }
+
+auth.onAuthStateChanged(user=>{
+  if(user){
+    currentUser=user;
+    el('loginScreen').style.display='none';
+    el('appContainer').style.display='block';
+    el('currentUserName').textContent=user.email;
+    startTicketsListen();
+  }else{
+    currentUser=null;
+    el('appContainer').style.display='none';
+    el('loginScreen').style.display='flex';
+    el('loginBtn').disabled=false;el('loginBtn').innerHTML='<i class="ti ti-login"></i> Sign in';
+  }
+});
+
+/* ============ DATA ============ */
+function startTicketsListen(){
+  if(ticketsUnsub)ticketsUnsub();
+  ticketsUnsub=db.collection(TICKET_COL).onSnapshot(sn=>{
+    ticketsData=sn.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>timeValue(b.updatedAt)-timeValue(a.updatedAt));
+    renderAll();
+  },err=>showToast('Could not load tickets: '+err.message,'error'));
+}
+
+/* ============ TABS / RENDER ============ */
+function switchTab(tab){
+  activeTab=tab;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.toggle('active',c.id==='tab-'+tab));
+  renderAll();
+}
+function renderAll(){renderDashboard();renderTickets();}
+
+function renderDashboard(){
+  const total=ticketsData.length,
+        pending=ticketsData.filter(t=>statusKey(t.status)==='pending').length,
+        started=ticketsData.filter(t=>statusKey(t.status)==='started').length,
+        urgent=ticketsData.filter(t=>t.priority==='Urgent'&&statusKey(t.status)!=='closed').length;
+  el('tab-dashboard').innerHTML=`<div class="stats">
+    <div class="stat"><div class="stat-icon"><i class="ti ti-ticket"></i></div><div><div class="stat-value">${total}</div><div class="stat-label">Total tickets</div></div></div>
+    <div class="stat"><div class="stat-icon"><i class="ti ti-inbox"></i></div><div><div class="stat-value">${pending}</div><div class="stat-label">Pending</div></div></div>
+    <div class="stat"><div class="stat-icon"><i class="ti ti-player-play"></i></div><div><div class="stat-value">${started}</div><div class="stat-label">Started</div></div></div>
+    <div class="stat"><div class="stat-icon"><i class="ti ti-alert-triangle"></i></div><div><div class="stat-value">${urgent}</div><div class="stat-label">Urgent open</div></div></div>
+  </div>
+  <div class="card"><div class="card-header"><span>Recent tickets</span><button class="btn sm" onclick="switchTab('tickets')"><i class="ti ti-list-check"></i>View all</button></div>
+  <div class="table-wrap"><table><thead><tr><th>Ticket</th><th>Requester</th><th>Category</th><th>Priority</th><th>Status</th><th>Updated</th></tr></thead><tbody>
+  ${ticketsData.slice(0,10).map(t=>`<tr style="cursor:pointer" onclick="selectTicket('${t.id}');switchTab('tickets')">
+    <td><b>${esc(t.ticketId||t.id)}</b><div class="muted">${esc(t.subject||'-')}</div></td>
+    <td>${esc(t.requester||'-')}</td><td>${esc(t.category||'-')}</td>
+    <td>${priorityBadge(t.priority)}</td><td>${statusBadge(t.status)}</td><td class="muted">${fmtDate(t.updatedAt)}</td></tr>`).join('')||'<tr><td colspan="6" class="empty">No tickets yet.</td></tr>'}
+  </tbody></table></div></div>`;
+}
+
+function renderTickets(){
+  const filtered=activeFilter==='all'?ticketsData:ticketsData.filter(t=>statusKey(t.status)===activeFilter);
+  const selected=filtered.find(t=>t.id===selectedTicketId)||filtered[0]||null;
+  if(selected)selectedTicketId=selected.id;
+  el('tab-tickets').innerHTML=`<div class="filters">
+    ${['all','pending','started','closed'].map(f=>`<button class="btn sm ${activeFilter===f?'active':''}" onclick="setFilter('${f}')">${f==='all'?'All':f.replace(/\b\w/g,m=>m.toUpperCase())}</button>`).join('')}
+  </div>
+  <div class="queue-layout">
+    <div class="ticket-list">${filtered.length?filtered.map(ticketRow).join(''):'<div class="card empty">No tickets found.</div>'}</div>
+    <div class="card detail-box">${selected?ticketDetail(selected):'<div class="empty">Select a ticket to view details.</div>'}</div>
+  </div>`;
+}
+function setFilter(f){activeFilter=f;renderTickets()}
+function selectTicket(id){selectedTicketId=id;renderTickets()}
+
+function ticketRow(t){
+  return `<div class="ticket-row ${selectedTicketId===t.id?'selected':''}" onclick="selectTicket('${t.id}')">
+    <div class="ticket-title"><span>${esc(t.subject||'Untitled ticket')}</span>${priorityBadge(t.priority)}</div>
+    <div class="ticket-meta">${esc(t.ticketId||t.id)} · ${esc(t.requesterCompany||t.requester||'-')} · ${esc(t.category||'-')}<br>${statusBadge(t.status)} <span style="margin-left:6px">${fmtDate(t.updatedAt)}</span></div>
+  </div>`;
+}
+
+function ticketDetail(t){
+  const comments=(t.comments||[]).map(c=>`<div class="message"><b>${esc(c.actor||'Support')} <span class="muted">${fmtDate(c.time)}</span></b><p>${esc(c.message||'')}</p></div>`).join('');
+  const attachments=(t.attachments||[]).map(a=>`<a class="attach-chip" href="${esc(a.url)}" target="_blank"><i class="ti ti-paperclip"></i>${esc(a.name)}</a>`).join('');
+  const closeDuration=t.closedAt?durationText(t.createdAt,t.closedAt):'-';
+  return `<div class="card-header" style="margin:-16px -16px 14px">
+    <div><div>${esc(t.subject||'Untitled ticket')}</div><div class="muted">${esc(t.ticketId||t.id)} · opened by ${esc(t.requester||'-')}</div></div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end">${priorityBadge(t.priority)}${statusBadge(t.status)}</div>
+  </div>
+
+  <div class="form-row">
+    <div><div class="muted">Company</div><div class="strong">${esc(t.requesterCompany||'-')}</div></div>
+    <div><div class="muted">Phone</div><div class="strong">${esc(t.requesterPhone||'-')}</div></div>
+    <div><div class="muted">Site</div><div class="strong">${esc(t.siteLocation||'-')}</div></div>
+    <div><div class="muted">Panel / System</div><div class="strong">${esc(t.panelModel||'-')}</div></div>
+    <div><div class="muted">Requester role</div><div class="strong">${esc(t.requesterRole||'-')}</div></div>
+    <div><div class="muted">Time to close</div><div class="strong">${esc(closeDuration)}</div></div>
+  </div>
+
+  <div class="message"><b>${esc(t.requester||'Requester')}</b><p>${esc(t.message||'')}</p></div>
+  ${attachments?`<div style="margin:8px 0">${attachments}</div>`:''}
+  ${comments}
+
+  <div class="form-row">
+    <div class="form-group"><label>Assign to</label><select id="detail-assignee"><option value="">Unassigned</option>${teamOptions(t.assignee)}</select></div>
+    <div class="form-group"><label>Status</label><select id="detail-status">
+      <option ${statusKey(t.status)==='pending'?'selected':''}>Pending</option>
+      <option ${statusKey(t.status)==='started'?'selected':''}>Started</option>
+      <option ${statusKey(t.status)==='closed'?'selected':''}>Closed</option>
+    </select></div>
+  </div>
+  <div class="form-group"><label>Reply to requester / internal note</label><textarea id="detail-reply" placeholder="Write a reply or status note"></textarea></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn primary" onclick="saveTicketUpdate('${t.id}')"><i class="ti ti-device-floppy"></i>Save Update</button>
+    ${statusKey(t.status)!=='closed'?`<button class="btn ok" onclick="closeTicket('${t.id}')"><i class="ti ti-check"></i>Close Ticket</button>`:''}
+  </div>`;
+}
+
+async function saveTicketUpdate(id){
+  const t=ticketsData.find(x=>x.id===id);if(!t)return;
+  const assignee=g('detail-assignee'), status=g('detail-status'), reply=g('detail-reply');
+  const now=nowIso();
+  const update={updatedAt:now};
+  const audit=[...(t.audit||[])];
+
+  if(assignee!==(t.assignee||'')){
+    update.assignee=assignee;update.assigneeName=assignee;
+    audit.push({time:now,actor:currentUser.email,action:assignee?`Assigned to ${assignee}`:'Unassigned'});
+  }
+  if(status!==t.status){
+    update.status=status;
+    if(status==='Started'&&!t.startedAt)update.startedAt=now;
+    if(status==='Closed'){update.closedAt=now;update.timeToCloseMinutes=Math.round((timeValue(now)-timeValue(t.createdAt))/60000);}
+    audit.push({time:now,actor:currentUser.email,action:`Status changed to ${status}`});
+  }
+  if(reply){
+    update.comments=[...(t.comments||[]),{time:now,actor:currentUser.email,message:reply}];
+    audit.push({time:now,actor:currentUser.email,action:'Added reply'});
+  }
+  update.audit=audit;
+
+  await db.collection(TICKET_COL).doc(id).update(update);
+  el('detail-reply').value='';
+  showToast('Ticket updated');
+}
+
+async function closeTicket(id){
+  const t=ticketsData.find(x=>x.id===id);if(!t)return;
+  const now=nowIso();
+  const audit=[...(t.audit||[]),{time:now,actor:currentUser.email,action:'Closed ticket'}];
+  await db.collection(TICKET_COL).doc(id).update({
+    status:'Closed',updatedAt:now,closedAt:now,
+    timeToCloseMinutes:Math.round((timeValue(now)-timeValue(t.createdAt))/60000),
+    audit
+  });
+  showToast('Ticket closed');
+}
+</script>
+</body>
+</html>
