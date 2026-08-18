@@ -1,1 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DQAP eCSS — Simplex Support Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{--p:#006994;--pd:#004A68;--pl:#E4F1FA;--bg:#F4F6FA;--card:#fff;--t1:#111;--t2:#666;--bd:rgba(0,0,0,.11);--bds:rgba(0,0,0,.22);--rad:10px;--ok:#1B5E20;--warn:#E65100;--bad:#B71C1C;--oxide:#B5502F}
+  body{font-family:'DM Sans','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--t1);font-size:14px}
+  .wrap{max-width:920px;margin:0 auto;padding:22px 18px 60px}
 
+  .header{background:linear-gradient(135deg,var(--p),var(--pd));color:#fff;padding:30px 26px;border-radius:var(--rad);margin-bottom:18px}
+  .header .eyebrow{font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;opacity:.8;margin-bottom:6px}
+  .header h1{font-size:26px;font-weight:800;display:flex;align-items:center;gap:10px}
+  .header p{opacity:.9;font-size:13px;margin-top:8px;max-width:560px;line-height:1.55}
+  .header .badge-row{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+  .hbadge{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);padding:5px 11px;border-radius:20px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px}
+
+  .tabs{display:flex;gap:8px;margin-bottom:16px}
+  .tab-btn{flex:1;padding:12px 14px;border-radius:8px;border:1px solid var(--bds);background:var(--card);color:var(--t1);cursor:pointer;font-size:13px;font-weight:700;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:7px}
+  .tab-btn.active{background:var(--oxide);color:#fff;border-color:var(--oxide)}
+  .tab-panel{display:none}.tab-panel.active{display:block}
+
+  .card{background:var(--card);border-radius:var(--rad);border:.5px solid var(--bd);padding:20px;margin-bottom:16px}
+  .card-header{font-size:14px;font-weight:800;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+  .card-sub{font-size:12px;color:var(--t2);margin-bottom:16px}
+
+  .form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-bottom:14px}
+  .form-group label{display:block;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+  .req::after{content:' *';color:var(--bad)}
+  input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--bd);border-radius:7px;background:#fafafa;color:var(--t1);font-size:13px;font-family:inherit}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--p);background:#fff}
+  textarea{min-height:90px;resize:vertical}
+  .hint{font-size:11px;color:var(--t2);margin-top:5px;line-height:1.4}
+
+  .role-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+  .role-opt{border:1px solid var(--bd);border-radius:8px;padding:10px 12px;cursor:pointer;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:8px;background:#fafafa}
+  .role-opt input{width:auto;accent-color:var(--oxide)}
+  .role-opt.checked{border-color:var(--oxide);background:#FBEDE7}
+
+  .drop-zone{border:1.5px dashed var(--bds);border-radius:10px;padding:24px;text-align:center;background:#fafafa;cursor:pointer;transition:all .15s}
+  .drop-zone:hover,.drop-zone.drag{border-color:var(--p);background:var(--pl)}
+  .drop-zone i{font-size:26px;color:var(--p);margin-bottom:6px;display:block}
+  .drop-zone .dz-title{font-weight:700;font-size:13px}
+  .drop-zone .dz-sub{font-size:11.5px;color:var(--t2);margin-top:3px}
+  .file-list{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+  .file-chip{display:flex;align-items:center;gap:8px;background:#fff;border:.5px solid var(--bd);border-radius:7px;padding:7px 10px;font-size:12px}
+  .file-chip i{color:var(--p)}
+  .file-chip .fname{flex:1;font-weight:600}
+  .file-chip .fsize{color:var(--t2);font-size:11px}
+  .file-chip .rm{cursor:pointer;color:var(--bad);font-size:14px}
+  .drive-note{display:flex;gap:8px;align-items:flex-start;background:var(--pl);border-radius:8px;padding:10px 12px;font-size:11.5px;color:var(--pd);margin-top:10px;line-height:1.5}
+  .drive-note i{margin-top:1px}
+
+  .disclaimer{background:#FFF8ED;border:1px solid #F0DCA8;border-radius:8px;padding:14px 15px;font-size:11.5px;color:#6b4e0e;line-height:1.55;margin-bottom:14px}
+  .disclaimer .dh{display:flex;gap:9px;margin-bottom:10px}
+  .disclaimer .dh i{color:var(--warn);font-size:16px;margin-top:1px}
+  .disclaimer .dh b{color:#4a3608}
+  .ack-row{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid #F0DCA8;border-radius:7px;padding:10px 11px}
+  .ack-row input{width:18px;height:18px;flex-shrink:0;margin-top:2px;cursor:pointer;accent-color:var(--oxide)}
+  .ack-row label{font-size:12px;color:var(--t1);cursor:pointer;line-height:1.5;font-weight:500}
+  .ack-row.flash{animation:flashBorder .6s ease}
+  @keyframes flashBorder{0%,100%{border-color:#F0DCA8}50%{border-color:var(--bad)}}
+  .ack-error{color:var(--bad);font-size:11px;font-weight:700;margin-top:6px;display:none}
+  .ack-error.show{display:block}
+
+  .btn{padding:11px 18px;border-radius:8px;border:.5px solid var(--bds);background:transparent;color:var(--t1);cursor:pointer;font-size:13px;font-weight:700;transition:all .15s;display:inline-flex;align-items:center;gap:7px;font-family:inherit}
+  .btn.primary{background:var(--oxide);color:#fff;border-color:var(--oxide);width:100%;justify-content:center;padding:13px}
+  .btn.primary:hover{background:#944225}
+  .btn.ghost{background:#fff}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+
+  .confirm-card{text-align:center;padding:34px 20px}
+  .confirm-icon{width:56px;height:56px;border-radius:50%;background:#E8F5E9;color:var(--ok);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 14px}
+  .ticket-id{font-size:22px;font-weight:800;color:var(--p);letter-spacing:.5px;margin:6px 0}
+  .confirm-meta{font-size:12.5px;color:var(--t2);max-width:420px;margin:0 auto;line-height:1.6}
+  .confirm-actions{display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap}
+
+  .track-row{display:flex;gap:10px;flex-wrap:wrap}
+  .track-row input{flex:1;min-width:180px}
+
+  .status-timeline{display:flex;flex-direction:column;gap:0;margin-top:18px}
+  .tl-item{display:flex;gap:12px;padding-bottom:20px;position:relative}
+  .tl-item:last-child{padding-bottom:0}
+  .tl-item::before{content:'';position:absolute;left:9px;top:22px;bottom:0;width:2px;background:var(--bd)}
+  .tl-item:last-child::before{display:none}
+  .tl-dot{width:20px;height:20px;border-radius:50%;background:var(--ok);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;z-index:1}
+  .tl-dot.pending{background:#ECEFF1;color:var(--t2)}
+  .tl-body b{font-size:12.5px;display:block}
+  .tl-body .muted{font-size:11.5px;color:var(--t2);margin-top:2px}
+
+  .ticket-summary-card{border:1px solid var(--bd);border-radius:8px;padding:14px;margin-top:14px;background:#fafafa}
+  .ts-row{display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:.5px solid var(--bd)}
+  .ts-row:last-child{border:0}
+  .ts-row span:first-child{color:var(--t2);font-weight:600}
+  .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:10.5px;font-weight:700}
+  .s-started{background:#E3F2FD;color:#006994}
+
+  .empty{text-align:center;color:var(--t2);padding:30px 12px;font-size:12.5px}
+  .footer-note{text-align:center;font-size:11px;color:var(--t2);margin-top:22px}
+  .toast{position:fixed;right:18px;bottom:18px;background:#1A237E;color:#fff;padding:11px 16px;border-radius:10px;font-size:12.5px;font-weight:600;z-index:9999;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+  .toast.error{background:var(--bad)}
+  .btn.primary.loading{opacity:.75;pointer-events:none}
+  .spin{animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div class="eyebrow">DQAP Systems · Simplex Fire Detection Support</div>
+    <h1><i class="ti ti-headset"></i> DQAP eCSS</h1>
+    <p>Remote troubleshooting support for trained fire alarm technicians who need Simplex-specific guidance — for contractors, resellers and consultants working on Simplex installations across India.</p>
+    <div class="badge-row">
+      <div class="hbadge"><i class="ti ti-shield-check"></i> 12 years Simplex experience</div>
+      <div class="hbadge"><i class="ti ti-clock"></i> Response within business hours</div>
+      <div class="hbadge"><i class="ti ti-folder"></i> Attachments stored securely</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="btn-raise" onclick="switchTab('raise')"><i class="ti ti-plus"></i> Raise a Ticket</button>
+    <button class="tab-btn" id="btn-track" onclick="switchTab('track')"><i class="ti ti-search"></i> Track a Ticket</button>
+  </div>
+
+  <!-- RAISE TICKET -->
+  <div class="tab-panel active" id="panel-raise">
+
+    <div id="raise-form-wrap">
+      <div class="disclaimer" id="disclaimerBlock">
+        <div class="dh"><i class="ti ti-alert-triangle"></i><div><b>Before you raise a ticket</b> — this desk provides remote diagnostic guidance only, for technicians already trained on fire alarm systems. It does not replace on-site commissioning, statutory approvals, or Simplex's own OEM channels for warranty/hardware claims.</div></div>
+        <div class="ack-row" id="ackRow">
+          <input type="checkbox" id="f-ack" onchange="clearAckError()">
+          <label for="f-ack">I confirm I am a trained technical resource authorized to work on the fire alarm system at the site named below, and I understand this support is advisory guidance only — DQAP Systems is not responsible for on-site actions taken based on it.</label>
+        </div>
+        <div class="ack-error" id="ackError"><i class="ti ti-x"></i> Please confirm this statement before submitting — it's mandatory.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><i class="ti ti-user"></i> Your details</div>
+        <div class="card-sub">So we know who we're speaking with and can route the ticket correctly.</div>
+        <div class="form-row">
+          <div class="form-group"><label class="req">Full name</label><input id="f-name" placeholder="e.g. Ramesh Kumar"></div>
+          <div class="form-group"><label class="req">Company / Firm</label><input id="f-company" placeholder="Contractor or reseller name"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="req">Phone number</label><input id="f-phone" placeholder="+91 ..."></div>
+          <div class="form-group"><label>Email (optional)</label><input id="f-email" placeholder="name@company.com"></div>
+        </div>
+        <div class="form-group" style="margin-bottom:14px">
+          <label class="req">Your role</label>
+          <div class="role-grid" id="role-grid">
+            <label class="role-opt"><input type="radio" name="role" value="Contractor Technician"> Contractor technician</label>
+            <label class="role-opt"><input type="radio" name="role" value="Reseller Technician"> Reseller technician</label>
+            <label class="role-opt"><input type="radio" name="role" value="Consultant"> Consultant</label>
+            <label class="role-opt"><input type="radio" name="role" value="Other"> Other</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><i class="ti ti-tools"></i> Issue details</div>
+        <div class="form-row">
+          <div class="form-group"><label class="req">Site / project location</label><input id="f-site" placeholder="e.g. Refinery, Panipat"></div>
+          <div class="form-group"><label class="req">Simplex panel / system model</label><input id="f-model" placeholder="e.g. 4100ES, TrueAlarm"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="req">Category</label>
+            <select id="f-category">
+              <option>Panel Programming</option>
+              <option>Device Addressing / Mapping</option>
+              <option>Fault / Trouble Signal</option>
+              <option>Network / Networking Cards</option>
+              <option>Software (MPS / Annunciator)</option>
+              <option>Commissioning Support</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="req">Urgency</label>
+            <select id="f-priority">
+              <option>Medium — working, need guidance</option>
+              <option>High — degraded, partial coverage lost</option>
+              <option>Urgent — system down / life-safety impact</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:14px">
+          <label class="req">Describe the issue</label>
+          <textarea id="f-message" placeholder="What's happening, what you've already tried, any error/fault codes shown on panel..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Attachments — panel photos, fault logs, PDFs</label>
+          <div class="drop-zone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+            <i class="ti ti-cloud-upload"></i>
+            <div class="dz-title">Click to add files or drag & drop</div>
+            <div class="dz-sub">Photos of panel/fault screen, PDF logs — up to 10 MB each</div>
+          </div>
+          <input type="file" id="fileInput" multiple style="display:none" accept=".jpg,.jpeg,.png,.pdf" onchange="handleFiles(this.files)">
+          <div class="file-list" id="fileList"></div>
+          <div class="drive-note"><i class="ti ti-brand-google-drive"></i> Files upload to a private Google Drive folder created for this ticket — visible only to you and the DQAP support team, not indexed publicly.</div>
+        </div>
+      </div>
+
+      <button class="btn primary" id="submitBtn" onclick="submitTicket()"><i class="ti ti-send"></i> Submit Ticket</button>
+    </div>
+
+    <div id="raise-confirm-wrap" style="display:none"></div>
+  </div>
+
+  <!-- TRACK TICKET -->
+  <div class="tab-panel" id="panel-track">
+    <div class="card">
+      <div class="card-header"><i class="ti ti-search"></i> Check ticket status</div>
+      <div class="card-sub">Enter your Ticket ID along with the phone number or email used at submission.</div>
+      <div class="track-row">
+        <input id="t-ticketid" placeholder="Ticket ID, e.g. ECSS-20260818-0142">
+        <input id="t-contact" placeholder="Phone or email used">
+        <button class="btn ghost" onclick="trackTicket()"><i class="ti ti-search"></i> Track</button>
+      </div>
+    </div>
+    <div id="track-result"></div>
+  </div>
+
+  <div class="footer-note">DQAP Systems Pvt. Ltd. · Simplex-authorized support partner · Delhi NCR</div>
+</div>
+
+<script>
+/* ===== CONFIG ===== */
+firebase.initializeApp({
+  apiKey: "AIzaSyCBRE0VlIjuRsW7JE22pVHsKimDwtrTSHE",
+  authDomain: "dqap-ecss.firebaseapp.com",
+  projectId: "dqap-ecss",
+  storageBucket: "dqap-ecss.firebasestorage.app",
+  messagingSenderId: "902896957641",
+  appId: "1:902896957641:web:f87299e984de72eb6e7518"
+});
+const db=firebase.firestore();
+const TICKET_COL='ecss_tickets';
+const COUNTER_DOC=db.collection('ecss_settings').doc('ticket_counter');
+// TODO: replace with the deployed Cloud Run upload service URL once live
+const DRIVE_UPLOAD_URL='https://REPLACE-WITH-CLOUD-RUN-URL/upload';
+
+let attachedFiles=[];
+
+function switchTab(tab){
+  document.getElementById('btn-raise').classList.toggle('active',tab==='raise');
+  document.getElementById('btn-track').classList.toggle('active',tab==='track');
+  document.getElementById('panel-raise').classList.toggle('active',tab==='raise');
+  document.getElementById('panel-track').classList.toggle('active',tab==='track');
+}
+
+document.querySelectorAll('.role-opt').forEach(opt=>{
+  opt.addEventListener('click',()=>{
+    document.querySelectorAll('.role-opt').forEach(o=>o.classList.remove('checked'));
+    opt.classList.add('checked');
+    opt.querySelector('input').checked=true;
+  });
+});
+
+const dz=document.getElementById('dropzone');
+['dragover','dragleave','drop'].forEach(evt=>{
+  dz.addEventListener(evt,e=>{
+    e.preventDefault();
+    dz.classList.toggle('drag',evt==='dragover');
+    if(evt==='drop')handleFiles(e.dataTransfer.files);
+  });
+});
+
+function handleFiles(files){
+  Array.from(files).forEach(f=>attachedFiles.push(f));
+  renderFileList();
+}
+function removeFile(idx){attachedFiles.splice(idx,1);renderFileList()}
+function renderFileList(){
+  const wrap=document.getElementById('fileList');
+  wrap.innerHTML=attachedFiles.map((f,i)=>`
+    <div class="file-chip">
+      <i class="ti ti-${f.type.includes('pdf')?'file-type-pdf':'photo'}"></i>
+      <span class="fname">${f.name}</span>
+      <span class="fsize">${(f.size/1024).toFixed(0)} KB</span>
+      <span class="rm" onclick="removeFile(${i})">&times;</span>
+    </div>`).join('');
+}
+
+function showToast(msg,type='success'){
+  const t=document.createElement('div');
+  t.className='toast '+(type==='error'?'error':'');
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),3800);
+}
+
+function setSubmitting(state){
+  const btn=document.getElementById('submitBtn');
+  btn.classList.toggle('loading',state);
+  btn.innerHTML=state?'<i class="ti ti-loader-2 spin"></i> Submitting…':'<i class="ti ti-send"></i> Submit Ticket';
+}
+
+async function nextTicketId(){
+  const today=new Date().toISOString().slice(0,10).replace(/-/g,'');
+  return db.runTransaction(async tx=>{
+    const doc=await tx.get(COUNTER_DOC);
+    const seq=(doc.exists?(doc.data().seq||0):0)+1;
+    tx.set(COUNTER_DOC,{seq,updatedAt:new Date().toISOString()},{merge:true});
+    return `ECSS-${today}-${String(seq).padStart(4,'0')}`;
+  });
+}
+
+async function uploadAttachments(ticketId,company){
+  if(!attachedFiles.length)return [];
+  const fd=new FormData();
+  fd.append('ticketId',ticketId);
+  fd.append('company',company);
+  attachedFiles.forEach(f=>fd.append('files',f));
+  const res=await fetch(DRIVE_UPLOAD_URL,{method:'POST',body:fd});
+  if(!res.ok)throw new Error('Attachment upload failed ('+res.status+')');
+  const data=await res.json();
+  return data.files||[]; // [{name, url}]
+}
+
+async function submitTicket(){
+  const name=document.getElementById('f-name').value.trim();
+  const company=document.getElementById('f-company').value.trim();
+  const phone=document.getElementById('f-phone').value.trim();
+  const email=document.getElementById('f-email').value.trim();
+  const role=document.querySelector('input[name="role"]:checked');
+  const message=document.getElementById('f-message').value.trim();
+  const site=document.getElementById('f-site').value.trim();
+  const model=document.getElementById('f-model').value.trim();
+  const category=document.getElementById('f-category').value;
+  const priorityLabel=document.getElementById('f-priority').value;
+
+  if(!name||!company||!phone||!role||!message||!site){
+    alert('Please fill all required fields (marked *) before submitting.');
+    return;
+  }
+  const ack=document.getElementById('f-ack');
+  if(!ack.checked){
+    const row=document.getElementById('ackRow');
+    document.getElementById('ackError').classList.add('show');
+    row.classList.remove('flash');void row.offsetWidth;row.classList.add('flash');
+    document.getElementById('disclaimerBlock').scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
+
+  const priority=priorityLabel.startsWith('Urgent')?'Urgent':priorityLabel.startsWith('High')?'High':'Medium';
+
+  setSubmitting(true);
+  try{
+    const ticketId=await nextTicketId();
+    const attachments=await uploadAttachments(ticketId,company);
+    const now=new Date().toISOString();
+
+    await db.collection(TICKET_COL).doc(ticketId).set({
+      ticketId,
+      source:'DQAP-eCSS',
+      subject:`${category} — ${site}`,
+      requester:`${name} (${company})`,
+      requesterName:name,
+      requesterCompany:company,
+      requesterPhone:phone,
+      requesterEmail:email||'',
+      requesterRole:role.value,
+      siteLocation:site,
+      panelModel:model,
+      category,
+      priority,
+      status:'Pending',
+      message:`Site: ${site}\nPanel/System: ${model||'-'}\nRole: ${role.value}\n\n${message}`,
+      assignee:'',
+      assigneeName:'',
+      attachments,
+      comments:[],
+      audit:[{time:now,actor:`${name} (eCSS public portal)`,action:'Ticket raised via DQAP eCSS public portal'}],
+      consentAcknowledged:true,
+      consentAt:now,
+      createdAt:now,
+      updatedAt:now
+    });
+
+    document.getElementById('raise-form-wrap').style.display='none';
+    document.getElementById('raise-confirm-wrap').style.display='block';
+    document.getElementById('raise-confirm-wrap').innerHTML=`
+      <div class="card confirm-card">
+        <div class="confirm-icon"><i class="ti ti-check"></i></div>
+        <div style="font-size:13px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.5px">Ticket submitted</div>
+        <div class="ticket-id">${ticketId}</div>
+        <div class="confirm-meta">Thanks ${esc(name)} — this has been logged with our support team. ${attachments.length?`${attachments.length} file(s) saved to a private Drive folder for this ticket.`:''} Save this Ticket ID to track status.</div>
+        <div class="confirm-actions">
+          <button class="btn ghost" onclick="location.reload()"><i class="ti ti-plus"></i> Raise another ticket</button>
+          <button class="btn primary" style="width:auto" onclick="switchTab('track');document.getElementById('t-ticketid').value='${ticketId}'"><i class="ti ti-search"></i> Track this ticket</button>
+        </div>
+      </div>`;
+  }catch(err){
+    showToast('Could not submit ticket: '+err.message,'error');
+  }finally{
+    setSubmitting(false);
+  }
+}
+
+function clearAckError(){document.getElementById('ackError').classList.remove('show')}
+
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+
+function fmtDate(iso){
+  const d=new Date(iso);
+  return Number.isNaN(d.getTime())?'-':d.toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+}
+function statusClass(status){
+  const k=String(status||'Pending').toLowerCase();
+  return k==='closed'?'s-closed':k==='started'?'s-started':'s-started';
+}
+
+async function trackTicket(){
+  const id=document.getElementById('t-ticketid').value.trim();
+  const contact=document.getElementById('t-contact').value.trim().toLowerCase();
+  const wrap=document.getElementById('track-result');
+  if(!id||!contact){wrap.innerHTML='<div class="card"><div class="empty">Enter both Ticket ID and the phone/email used at submission.</div></div>';return}
+
+  wrap.innerHTML='<div class="card"><div class="empty"><i class="ti ti-loader-2 spin"></i> Looking up ticket…</div></div>';
+  try{
+    const snap=await db.collection(TICKET_COL).doc(id).get();
+    if(!snap.exists){wrap.innerHTML='<div class="card"><div class="empty">No ticket found with that ID. Please check and try again.</div></div>';return}
+    const t=snap.data();
+    const matches=(t.requesterPhone||'').toLowerCase()===contact||(t.requesterEmail||'').toLowerCase()===contact;
+    if(!matches){wrap.innerHTML='<div class="card"><div class="empty">Ticket ID found, but the phone/email doesn\'t match our records for this ticket.</div></div>';return}
+
+    const statusSteps=[
+      {label:'Ticket submitted',time:t.createdAt,done:true},
+      {label:'Assigned to support engineer',time:t.assignee?t.updatedAt:null,done:!!t.assignee},
+      {label:'In progress',time:t.startedAt,done:['started','closed'].includes(String(t.status).toLowerCase())},
+      {label:'Resolved',time:t.closedAt,done:String(t.status).toLowerCase()==='closed'}
+    ];
+
+    wrap.innerHTML=`
+      <div class="card">
+        <div class="card-header"><i class="ti ti-ticket"></i> ${esc(id)} <span class="badge ${statusClass(t.status)}" style="margin-left:6px">${esc(t.status||'Pending')}</span></div>
+        <div class="ticket-summary-card">
+          <div class="ts-row"><span>Category</span><span>${esc(t.category||'-')}</span></div>
+          <div class="ts-row"><span>Site</span><span>${esc(t.siteLocation||'-')}</span></div>
+          <div class="ts-row"><span>Assigned to</span><span>${esc(t.assigneeName||t.assignee||'Not yet assigned')}</span></div>
+          <div class="ts-row"><span>Attachments</span><span>${(t.attachments||[]).length?(t.attachments||[]).map(a=>`<a href="${esc(a.url)}" target="_blank" style="color:var(--p)">${esc(a.name)}</a>`).join(', '):'None'}</span></div>
+        </div>
+        <div class="status-timeline">
+          ${statusSteps.map(s=>`<div class="tl-item"><div class="tl-dot ${s.done?'':'pending'}"><i class="ti ti-${s.done?'check':'point'}"></i></div><div class="tl-body"><b ${s.done?'':'style="color:var(--t2)"'}>${esc(s.label)}</b><div class="muted">${s.time?fmtDate(s.time):(s.done?'':'Pending')}</div></div></div>`).join('')}
+        </div>
+        ${(t.comments||[]).length?`<div style="margin-top:14px"><div class="card-header" style="font-size:12.5px">Support replies</div>${t.comments.map(c=>`<div style="background:#fafafa;border:.5px solid var(--bd);border-left:3px solid var(--p);border-radius:8px;padding:10px 12px;margin-top:8px"><b style="font-size:12px;display:block">${esc(c.actor||'Support')} <span class="muted">${fmtDate(c.time)}</span></b><p style="font-size:12.5px;margin-top:3px;white-space:pre-wrap">${esc(c.message||'')}</p></div>`).join('')}</div>`:''}
+      </div>`;
+  }catch(err){
+    wrap.innerHTML=`<div class="card"><div class="empty">Could not look up ticket: ${esc(err.message)}</div></div>`;
+  }
+}
+</script>
+</body>
+</html>
