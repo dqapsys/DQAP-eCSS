@@ -247,7 +247,7 @@ const db=firebase.firestore();
 const TICKET_COL='ecss_tickets';
 const COUNTER_DOC=db.collection('ecss_settings').doc('ticket_counter');
 // TODO: replace with the deployed Cloud Run upload service URL once live
-const DRIVE_UPLOAD_URL='https://REPLACE-WITH-CLOUD-RUN-URL/upload';
+const DRIVE_UPLOAD_URL='https://ecss-drive-upload-902896957641.asia-south1.run.app/upload';
 
 let attachedFiles=[];
 
