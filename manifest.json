@@ -1,7 +1,7 @@
 {
-  "name": "DQAP eCSS — Simplex Support",
+  "name": "DQAP eCSS — Customer Support",
   "short_name": "eCSS",
-  "description": "DQAP Simplex Support System — raise and track support tickets",
+  "description": "DQAP External Customer Support System — raise and track support tickets",
   "start_url": "/DQAP-eCSS/index.html",
   "scope": "/DQAP-eCSS/",
   "display": "standalone",
