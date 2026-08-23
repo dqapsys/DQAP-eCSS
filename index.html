@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DQAP eCSS — Simplex Support Desk</title>
+<title>DQAP eCSS — Customer Support Desk</title>
 <link rel="manifest" href="/DQAP-eCSS/manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,11 +18,9 @@
   .wrap{max-width:920px;margin:0 auto;padding:22px 18px 60px}
 
   .header{border-radius:var(--rad);overflow:hidden;margin-bottom:18px}
-  .header-brand{background:#fff;padding:14px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--bd)}
-  .header-brand .dqap-logo{height:30px;width:auto;display:block}
-  .header-brand .ecss-logo{height:30px;width:auto;display:block}
-  .header-brand .simplex-chip{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.3px}
-  .header-brand .simplex-chip img{height:13px;width:auto;display:block}
+  .header-brand{background:#fff;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;border-bottom:1px solid var(--bd)}
+  .header-brand .dqap-logo{height:46px;width:auto;display:block}
+  .header-brand .ecss-logo{height:36px;width:auto;display:block}
   .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
   .header-hero{background:linear-gradient(135deg,var(--p),var(--pd));color:#fff;padding:26px 26px 28px}
   .header-hero .eyebrow{font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;opacity:.8;margin-bottom:6px}
@@ -125,15 +123,14 @@
   <div class="header">
     <div class="header-brand">
       <img src="dqap-logo.png" alt="DQAP Systems" class="dqap-logo">
-      <div class="simplex-chip">  <img src="simplex-logo.png" alt="Simplex">  </div>
       <img src="ecss-logo.png" alt="DQAP eCSS" class="ecss-logo">
     </div>
     <div class="header-hero">
-      <h1 class="sr-only">DQAP eCSS — Simplex Support Portal</h1>
-      <div class="eyebrow">DQAP Systems · Simplex Support Portal</div>
-      <p>Remote troubleshooting support for trained fire alarm technicians who need Simplex-specific guidance — for contractors, resellers and consultants working on Simplex installations across India.</p>
+      <h1 class="sr-only">DQAP eCSS — Customer Support Portal</h1>
+      <div class="eyebrow">DQAP Systems · External Customer Support</div>
+      <p>Raise, track, and get help on service requests for your DQAP-supplied systems — support delivered on-site or remotely, depending on what the issue needs.</p>
       <div class="badge-row">
-        <div class="hbadge"><i class="ti ti-shield-check"></i> Rich Simplex Expertise</div>
+        <div class="hbadge"><i class="ti ti-shield-check"></i> Experienced Support Team</div>
         <div class="hbadge"><i class="ti ti-clock"></i> Prompt Response</div>
         <div class="hbadge"><i class="ti ti-folder"></i> Attachments stored securely</div>
       </div>
@@ -151,10 +148,10 @@
 
     <div id="raise-form-wrap">
       <div class="disclaimer" id="disclaimerBlock">
-        <div class="dh"><i class="ti ti-alert-triangle"></i><div><b>Before you raise a ticket</b> — this desk provides remote diagnostic guidance and on-site support, preferably for technicians already trained on fire alarm systems. It does not replace Simplex's own OEM channels for warranty/hardware claims.</div></div>
+        <div class="dh"><i class="ti ti-alert-triangle"></i><div><b>Before you raise a ticket</b> — DQAP Systems provides technical support for its supplied systems, delivered on-site or remotely depending on the issue. This does not replace statutory certifications, warranty terms, or manufacturer-specific approval processes where applicable.</div></div>
         <div class="ack-row" id="ackRow">
           <input type="checkbox" id="f-ack" onchange="clearAckError()">
-          <label for="f-ack">I confirm I am a trained technical resource authorized to work on the fire alarm system at the site mentioned below. I understand this support is advisory guidance only, and DQAP Systems is not responsible for on-site actions taken based on it.</label>
+          <label for="f-ack">I confirm the details provided below are accurate. I understand this support is advisory guidance only, and DQAP Systems is not responsible for on-site actions taken based on it.</label>
         </div>
         <div class="ack-error" id="ackError"><i class="ti ti-x"></i> Please confirm this statement before submitting — it's mandatory.</div>
       </div>
@@ -164,20 +161,11 @@
         <div class="card-sub">So we know who we're speaking with and can route the ticket correctly.</div>
         <div class="form-row">
           <div class="form-group"><label class="req">Full name</label><input id="f-name" placeholder="e.g. Ramesh Kumar"></div>
-          <div class="form-group"><label class="req">Company / Firm</label><input id="f-company" placeholder="Contractor or reseller name"></div>
+          <div class="form-group"><label class="req">Company / Firm</label><input id="f-company" placeholder="Your company name"></div>
         </div>
         <div class="form-row">
           <div class="form-group"><label class="req">Phone number</label><input id="f-phone" placeholder="+91 ..."></div>
           <div class="form-group"><label>Email (optional)</label><input id="f-email" placeholder="name@company.com"></div>
-        </div>
-        <div class="form-group" style="margin-bottom:14px">
-          <label class="req">Your role</label>
-          <div class="role-grid" id="role-grid">
-            <label class="role-opt"><input type="radio" name="role" value="SI / Contractor"> SI / Contractor</label>
-            <label class="role-opt"><input type="radio" name="role" value="Reseller"> Reseller</label>
-            <label class="role-opt"><input type="radio" name="role" value="End User"> End User</label>
-            <label class="role-opt"><input type="radio" name="role" value="Other"> Other</label>
-          </div>
         </div>
       </div>
 
@@ -185,39 +173,24 @@
         <div class="card-header"><i class="ti ti-tools"></i> Issue details</div>
         <div class="form-row">
           <div class="form-group"><label class="req">Site / project location</label><input id="f-site" placeholder="e.g. Refinery, Panipat"></div>
-          <div class="form-group"><label class="req">Simplex panel / system model</label><input id="f-model" placeholder="e.g. 4100ES, TrueAlarm"></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label class="req">Category</label>
-            <select id="f-category">
-              <option>Panel Programming</option>
-              <option>Device Addressing / Mapping</option>
-              <option>Fault / Trouble Signal</option>
-              <option>Network / Networking Cards</option>
-              <option>Software (MPS / Annunciator)</option>
-              <option>Commissioning Support</option>
-              <option>Other</option>
-            </select>
+          <div class="form-group"><label class="req">System</label>
+            <select id="f-system"></select>
           </div>
           <div class="form-group"><label class="req">Urgency</label>
-            <select id="f-priority">
-              <option>Medium — working, need guidance</option>
-              <option>High — degraded, partial coverage lost</option>
-              <option>Urgent — system down / life-safety impact</option>
-            </select>
+            <select id="f-priority"></select>
           </div>
         </div>
         <div class="form-group" style="margin-bottom:14px">
           <label class="req">Describe the issue</label>
-          <textarea id="f-message" placeholder="What's happening, what you've already tried, any error/fault codes shown on panel..."></textarea>
+          <textarea id="f-message" placeholder="What's happening, what you've already tried, any error/fault codes observed..."></textarea>
         </div>
 
         <div class="form-group">
-          <label>Attachments — panel photos, fault logs, PDFs</label>
+          <label>Attachments — photos, fault logs, PDFs</label>
           <div class="drop-zone" id="dropzone" onclick="document.getElementById('fileInput').click()">
             <i class="ti ti-cloud-upload"></i>
             <div class="dz-title">Click to add files or drag & drop</div>
-            <div class="dz-sub">Photos of panel/fault screen, PDF logs — up to 10 MB each</div>
+            <div class="dz-sub">Photos, fault screens, PDF logs — up to 10 MB each</div>
           </div>
           <input type="file" id="fileInput" multiple style="display:none" accept=".jpg,.jpeg,.png,.pdf" onchange="handleFiles(this.files)">
           <div class="file-list" id="fileList"></div>
@@ -256,20 +229,11 @@
         <div class="card-header" style="margin:-16px -16px 14px"><span>New registration</span></div>
         <div class="form-row">
           <div class="form-group"><label class="req">Full name</label><input id="p-name" placeholder="e.g. Ramesh Kumar"></div>
-          <div class="form-group"><label class="req">Company / Firm</label><input id="p-company" placeholder="Contractor or reseller name"></div>
+          <div class="form-group"><label class="req">Company / Firm</label><input id="p-company" placeholder="Your company name"></div>
         </div>
         <div class="form-row">
           <div class="form-group"><label class="req">Phone number</label><input id="p-phone" placeholder="+91 ..."></div>
           <div class="form-group"><label>Email (optional)</label><input id="p-email" placeholder="name@company.com"></div>
-        </div>
-        <div class="form-group" style="margin-bottom:14px">
-          <label class="req">Your role</label>
-          <div class="role-grid" id="p-role-grid">
-            <label class="role-opt"><input type="radio" name="p-role" value="SI / Contractor"> SI / Contractor</label>
-            <label class="role-opt"><input type="radio" name="p-role" value="Reseller"> Reseller</label>
-            <label class="role-opt"><input type="radio" name="p-role" value="End User"> End User</label>
-            <label class="role-opt"><input type="radio" name="p-role" value="Other"> Other</label>
-          </div>
         </div>
         <button class="btn primary" id="partnerSubmitBtn" onclick="submitPartnerRequest()"><i class="ti ti-send"></i> Submit Registration</button>
       </div>
@@ -306,10 +270,20 @@ const PARTNER_REQ_COL='ecss_partner_requests';
 const PARTNER_COL='ecss_partners';
 const COUNTER_DOC=db.collection('ecss_settings').doc('ticket_counter');
 const PARTNER_COUNTER_DOC=db.collection('ecss_settings').doc('partner_counter');
+const DROPDOWN_DOC=db.collection('ecss_settings').doc('dropdown_options');
 // TODO: replace with the deployed Cloud Run upload service URL once live
 const DRIVE_UPLOAD_URL='https://ecss-drive-upload-902896957641.asia-south1.run.app/upload';
 // TODO: replace with the VAPID key from Firebase Console → Project Settings → Cloud Messaging
 const FCM_VAPID_KEY='REPLACE_WITH_VAPID_KEY';
+
+// Fallback options if the Settings doc hasn't been configured yet — Updesh can
+// change these live from the console's Settings tab without touching code.
+const DEFAULT_SYSTEM_OPTIONS=['PAS','FDAS','GSS','Other'];
+const DEFAULT_URGENCY_OPTIONS=[
+  {label:'Medium — working, need guidance',value:'Medium'},
+  {label:'High — degraded, partial impact',value:'High'},
+  {label:'Urgent — system down / critical impact',value:'Urgent'}
+];
 
 let attachedFiles=[];
 let boundPartnerId=localStorage.getItem('ecss_partner_id')||'';
@@ -322,8 +296,27 @@ function switchTab(tab){
   });
 }
 
+async function loadDropdownOptions(){
+  let systemOptions=DEFAULT_SYSTEM_OPTIONS, urgencyOptions=DEFAULT_URGENCY_OPTIONS;
+  try{
+    const snap=await DROPDOWN_DOC.get();
+    if(snap.exists){
+      const d=snap.data();
+      if(Array.isArray(d.systemOptions)&&d.systemOptions.length)systemOptions=d.systemOptions;
+      if(Array.isArray(d.urgencyOptions)&&d.urgencyOptions.length)urgencyOptions=d.urgencyOptions;
+    }
+  }catch(err){console.warn('Could not load dropdown settings, using defaults:',err);}
+
+  const sysSel=document.getElementById('f-system');
+  sysSel.innerHTML=systemOptions.map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join('');
+
+  const prioSel=document.getElementById('f-priority');
+  prioSel.innerHTML=urgencyOptions.map(o=>`<option value="${esc(o.value)}">${esc(o.label)}</option>`).join('');
+}
+
 // Prefill ticket form if this device is already a bound partner
 window.addEventListener('DOMContentLoaded',()=>{
+  loadDropdownOptions();
   if(boundPartnerId){
     db.collection(PARTNER_COL).doc(boundPartnerId).get().then(snap=>{
       if(!snap.exists)return;
@@ -332,8 +325,6 @@ window.addEventListener('DOMContentLoaded',()=>{
       document.getElementById('f-company').value=p.company||'';
       document.getElementById('f-phone').value=p.phone||'';
       document.getElementById('f-email').value=p.email||'';
-      const roleInput=document.querySelector(`input[name="role"][value="${p.role}"]`);
-      if(roleInput){roleInput.checked=true;roleInput.closest('.role-opt').classList.add('checked');}
     }).catch(()=>{});
   }
 });
@@ -341,14 +332,6 @@ window.addEventListener('DOMContentLoaded',()=>{
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('/DQAP-eCSS/firebase-messaging-sw.js').catch(err=>console.warn('SW registration failed:',err));
 }
-
-document.querySelectorAll('.role-opt').forEach(opt=>{
-  opt.addEventListener('click',()=>{
-    document.querySelectorAll('.role-opt').forEach(o=>o.classList.remove('checked'));
-    opt.classList.add('checked');
-    opt.querySelector('input').checked=true;
-  });
-});
 
 const dz=document.getElementById('dropzone');
 ['dragover','dragleave','drop'].forEach(evt=>{
@@ -416,14 +399,12 @@ async function submitTicket(){
   const company=document.getElementById('f-company').value.trim();
   const phone=document.getElementById('f-phone').value.trim();
   const email=document.getElementById('f-email').value.trim();
-  const role=document.querySelector('input[name="role"]:checked');
   const message=document.getElementById('f-message').value.trim();
   const site=document.getElementById('f-site').value.trim();
-  const model=document.getElementById('f-model').value.trim();
-  const category=document.getElementById('f-category').value;
-  const priorityLabel=document.getElementById('f-priority').value;
+  const system=document.getElementById('f-system').value;
+  const priority=document.getElementById('f-priority').value||'Medium';
 
-  if(!name||!company||!phone||!role||!message||!site){
+  if(!name||!company||!phone||!message||!site){
     alert('Please fill all required fields (marked *) before submitting.');
     return;
   }
@@ -436,8 +417,6 @@ async function submitTicket(){
     return;
   }
 
-  const priority=priorityLabel.startsWith('Urgent')?'Urgent':priorityLabel.startsWith('High')?'High':'Medium';
-
   setSubmitting(true);
   try{
     const ticketId=await nextTicketId();
@@ -447,19 +426,17 @@ async function submitTicket(){
     await db.collection(TICKET_COL).doc(ticketId).set({
       ticketId,
       source:'DQAP-eCSS',
-      subject:`${category} — ${site}`,
+      subject:`${system} — ${site}`,
       requester:`${name} (${company})`,
       requesterName:name,
       requesterCompany:company,
       requesterPhone:phone,
       requesterEmail:email||'',
-      requesterRole:role.value,
       siteLocation:site,
-      panelModel:model,
-      category,
+      systemType:system,
       priority,
       status:'Pending',
-      message:`Site: ${site}\nPanel/System: ${model||'-'}\nRole: ${role.value}\n\n${message}`,
+      message:`Site: ${site}\nSystem: ${system||'-'}\n\n${message}`,
       assignee:'',
       assigneeName:'',
       attachments,
@@ -506,14 +483,6 @@ function statusClass(status){
 }
 
 /* ===== PARTNER REGISTRATION ===== */
-document.addEventListener('click',e=>{
-  const opt=e.target.closest('#p-role-grid .role-opt');
-  if(!opt)return;
-  document.querySelectorAll('#p-role-grid .role-opt').forEach(o=>o.classList.remove('checked'));
-  opt.classList.add('checked');
-  opt.querySelector('input').checked=true;
-});
-
 async function nextPartnerId(){
   return db.runTransaction(async tx=>{
     const doc=await tx.get(PARTNER_COUNTER_DOC);
@@ -528,9 +497,8 @@ async function submitPartnerRequest(){
   const company=document.getElementById('p-company').value.trim();
   const phone=document.getElementById('p-phone').value.trim();
   const email=document.getElementById('p-email').value.trim();
-  const role=document.querySelector('input[name="p-role"]:checked');
 
-  if(!name||!company||!phone||!role){
+  if(!name||!company||!phone){
     alert('Please fill all required fields (marked *) before submitting.');
     return;
   }
@@ -540,7 +508,7 @@ async function submitPartnerRequest(){
   try{
     const now=new Date().toISOString();
     const reqRef=await db.collection(PARTNER_REQ_COL).add({
-      name,company,phone,email:email||'',role:role.value,
+      name,company,phone,email:email||'',
       status:'Pending',requestedAt:now,updatedAt:now
     });
     document.getElementById('partner-intro').style.display='none';
@@ -649,7 +617,7 @@ async function trackTicket(){
       <div class="card">
         <div class="card-header"><i class="ti ti-ticket"></i> ${esc(id)} <span class="badge ${statusClass(t.status)}" style="margin-left:6px">${esc(t.status||'Pending')}</span></div>
         <div class="ticket-summary-card">
-          <div class="ts-row"><span>Category</span><span>${esc(t.category||'-')}</span></div>
+          <div class="ts-row"><span>System</span><span>${esc(t.systemType||'-')}</span></div>
           <div class="ts-row"><span>Site</span><span>${esc(t.siteLocation||'-')}</span></div>
           <div class="ts-row"><span>Assigned to</span><span>${esc(t.assigneeName||t.assignee||'Not yet assigned')}</span></div>
           <div class="ts-row"><span>Attachments</span><span>${(t.attachments||[]).length?(t.attachments||[]).map(a=>`<a href="${esc(a.url)}" target="_blank" style="color:var(--p)">${esc(a.name)}</a>`).join(', '):'None'}</span></div>
