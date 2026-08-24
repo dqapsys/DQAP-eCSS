@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DQAP eCSS Console — Customer Support</title>
-<link rel="manifest" href="/DQAP-eCSS/manifest.json">
+<link rel="manifest" href="/DQAP-eCSS/manifest-console.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -12,7 +12,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js"></script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   :root{--p:#006994;--pd:#004A68;--pl:#E4F1FA;--bg:#F4F6FA;--card:#fff;--t1:#111;--t2:#666;--bd:rgba(0,0,0,.11);--bds:rgba(0,0,0,.22);--rad:10px;--ok:#1B5E20;--warn:#E65100;--bad:#B71C1C;--oxide:#B5502F}
@@ -133,12 +132,15 @@
       </div>
       <h1>DQAP eCSS Console</h1><p>DQAP Customer Support — ticket queue, assignment, replies and closure tracking</p>
     </div>
-    <div class="userbox"><div><div class="lbl">Signed in as</div><div class="nm" id="currentUserName">-</div></div><button class="logout" onclick="doLogout()"><i class="ti ti-logout"></i></button></div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <button class="btn sm ghost" id="installBtn" style="display:none;background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.35);color:#fff" onclick="promptInstall()"><i class="ti ti-download"></i> Install App</button>
+      <div class="userbox"><div><div class="lbl">Signed in as</div><div class="nm" id="currentUserName">-</div></div><button class="logout" onclick="doLogout()"><i class="ti ti-logout"></i></button></div>
+    </div>
   </div>
 
   <div class="tabs">
     <button class="tab-btn active" data-tab="dashboard" onclick="switchTab('dashboard')"><i class="ti ti-layout-dashboard"></i>Dashboard</button>
-    <button class="tab-btn" data-tab="tickets" onclick="switchTab('tickets')"><i class="ti ti-list-check"></i>Tickets</button>
+    <button class="tab-btn" data-tab="tickets" onclick="switchTab('tickets')"><i class="ti ti-list-check"></i>Tickets <span id="pendingTicketCount" style="display:none;background:var(--bad);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:2px"></span></button>
     <button class="tab-btn" data-tab="partners" onclick="switchTab('partners')"><i class="ti ti-user-check"></i>Partners <span id="pendingPartnerCount" style="display:none;background:var(--bad);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:2px"></span></button>
     <button class="tab-btn" data-tab="settings" id="settingsTabBtn" style="display:none" onclick="switchTab('settings')"><i class="ti ti-settings"></i>Settings</button>
   </div>
@@ -171,11 +173,6 @@ const DEFAULT_URGENCY_OPTIONS=[
   {label:'High — degraded, partial impact',value:'High'},
   {label:'Urgent — system down / critical impact',value:'Urgent'}
 ];
-// TODO: replace with the VAPID key from Firebase Console → Project Settings → Cloud Messaging
-const FCM_VAPID_KEY='REPLACE_WITH_VAPID_KEY';
-// Internal staff notification tokens live here, keyed by team member name — separate
-// from ecss_partners, which is for external requesters.
-const STAFF_TOKEN_COL = 'ecss_staff_tokens';
 
 // eCSS team — hardcoded for v1. Add/remove names here as the support roster changes.
 // (Move to a Firestore ecss_users collection later if this needs to be admin-editable.)
@@ -223,23 +220,27 @@ function doLogin(){
 }
 function doLogout(){ if(ticketsUnsub)ticketsUnsub(); if(partnerReqUnsub)partnerReqUnsub(); auth.signOut(); }
 
-async function registerStaffNotifications(){
-  try{
-    if(!('Notification' in window) || !firebase.messaging || !firebase.messaging.isSupported())return;
-    const permission=await Notification.requestPermission();
-    if(permission!=='granted')return;
-    const messaging=firebase.messaging();
-    const token=await messaging.getToken({vapidKey:FCM_VAPID_KEY});
-    if(token){
-      await db.collection(STAFF_TOKEN_COL).doc(currentUser.email).set({
-        email:currentUser.email,
-        devices:firebase.firestore.FieldValue.arrayUnion({token,boundAt:nowIso(),userAgent:navigator.userAgent.slice(0,150)})
-      },{merge:true});
-    }
-    // Clear the badge once the console is opened and viewed
+const BASE_TITLE='DQAP eCSS Console';
+let pendingTicketsCount=0, pendingPartnersCount=0;
+
+// Updates the in-tab red badges, the OS-level app icon badge (works whenever
+// this tab/installed-app is open — no push notifications or server involved),
+// and the browser tab title, all from live Firestore listener data.
+function refreshAttentionIndicators(){
+  const total=pendingTicketsCount+pendingPartnersCount;
+
+  const tBadge=el('pendingTicketCount');
+  if(pendingTicketsCount){tBadge.textContent=pendingTicketsCount;tBadge.style.display='inline-block';}else{tBadge.style.display='none';}
+
+  const pBadge=el('pendingPartnerCount');
+  if(pendingPartnersCount){pBadge.textContent=pendingPartnersCount;pBadge.style.display='inline-block';}else{pBadge.style.display='none';}
+
+  if(total>0){
+    document.title=`(${total}) ${BASE_TITLE}`;
+    if('setAppBadge' in navigator)navigator.setAppBadge(total).catch(()=>{});
+  }else{
+    document.title=BASE_TITLE;
     if('clearAppBadge' in navigator)navigator.clearAppBadge().catch(()=>{});
-  }catch(err){
-    console.warn('Staff notification setup failed:',err);
   }
 }
 
@@ -252,7 +253,6 @@ auth.onAuthStateChanged(user=>{
     el('settingsTabBtn').style.display=isSettingsAdmin()?'flex':'none';
     startTicketsListen();
     startPartnerReqListen();
-    registerStaffNotifications();
   }else{
     currentUser=null;
     el('appContainer').style.display='none';
@@ -261,8 +261,24 @@ auth.onAuthStateChanged(user=>{
   }
 });
 
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/DQAP-eCSS/firebase-messaging-sw.js').catch(err=>console.warn('SW registration failed:',err));
+/* ============ INSTALL PROMPT ============ */
+let deferredInstallPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();
+  deferredInstallPrompt=e;
+  el('installBtn').style.display='inline-flex';
+});
+window.addEventListener('appinstalled',()=>{
+  deferredInstallPrompt=null;
+  el('installBtn').style.display='none';
+  showToast('DQAP eCSS Console installed');
+});
+async function promptInstall(){
+  if(!deferredInstallPrompt)return;
+  deferredInstallPrompt.prompt();
+  const {outcome}=await deferredInstallPrompt.userChoice;
+  if(outcome==='accepted')el('installBtn').style.display='none';
+  deferredInstallPrompt=null;
 }
 
 /* ============ DATA ============ */
@@ -270,6 +286,8 @@ function startTicketsListen(){
   if(ticketsUnsub)ticketsUnsub();
   ticketsUnsub=db.collection(TICKET_COL).onSnapshot(sn=>{
     ticketsData=sn.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>timeValue(b.updatedAt)-timeValue(a.updatedAt));
+    pendingTicketsCount=ticketsData.filter(t=>statusKey(t.status)==='pending').length;
+    refreshAttentionIndicators();
     renderAll();
   },err=>showToast('Could not load tickets: '+err.message,'error'));
 }
@@ -278,9 +296,8 @@ function startPartnerReqListen(){
   if(partnerReqUnsub)partnerReqUnsub();
   partnerReqUnsub=db.collection(PARTNER_REQ_COL).onSnapshot(sn=>{
     partnerReqData=sn.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>timeValue(b.requestedAt)-timeValue(a.requestedAt));
-    const pending=partnerReqData.filter(r=>r.status==='Pending').length;
-    const badge=el('pendingPartnerCount');
-    if(pending){badge.textContent=pending;badge.style.display='inline-block';}else{badge.style.display='none';}
+    pendingPartnersCount=partnerReqData.filter(r=>r.status==='Pending').length;
+    refreshAttentionIndicators();
     renderAll();
   },err=>showToast('Could not load partner requests: '+err.message,'error'));
 }
