@@ -253,7 +253,6 @@
   <div class="footer-note">DQAP Systems · D-996, Sector 7, Near Ramphal Chowk, Dwarka, New Delhi 110075</div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js"></script>
 <script>
 /* ===== CONFIG ===== */
 firebase.initializeApp({
@@ -273,8 +272,6 @@ const PARTNER_COUNTER_DOC=db.collection('ecss_settings').doc('partner_counter');
 const DROPDOWN_DOC=db.collection('ecss_settings').doc('dropdown_options');
 // TODO: replace with the deployed Cloud Run upload service URL once live
 const DRIVE_UPLOAD_URL='https://ecss-drive-upload-902896957641.asia-south1.run.app/upload';
-// TODO: replace with the VAPID key from Firebase Console → Project Settings → Cloud Messaging
-const FCM_VAPID_KEY='REPLACE_WITH_VAPID_KEY';
 
 // Fallback options if the Settings doc hasn't been configured yet — Updesh can
 // change these live from the console's Settings tab without touching code.
@@ -328,10 +325,6 @@ window.addEventListener('DOMContentLoaded',()=>{
     }).catch(()=>{});
   }
 });
-
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/DQAP-eCSS/firebase-messaging-sw.js').catch(err=>console.warn('SW registration failed:',err));
-}
 
 const dz=document.getElementById('dropzone');
 ['dragover','dragleave','drop'].forEach(evt=>{
@@ -525,29 +518,6 @@ async function submitPartnerRequest(){
   }
 }
 
-async function requestNotificationPermissionAndBind(partnerId){
-  try{
-    if(!('Notification' in window) || !firebase.messaging || !firebase.messaging.isSupported()){
-      return {bound:true,notified:false,reason:'Notifications are not supported on this browser/device — you can still use the app, just check ticket status manually.'};
-    }
-    const permission=await Notification.requestPermission();
-    if(permission!=='granted'){
-      return {bound:true,notified:false,reason:'Notification permission was not granted — you can still use the app, just check ticket status manually.'};
-    }
-    const messaging=firebase.messaging();
-    const token=await messaging.getToken({vapidKey:FCM_VAPID_KEY});
-    if(token){
-      await db.collection(PARTNER_COL).doc(partnerId).update({
-        devices:firebase.firestore.FieldValue.arrayUnion({token,boundAt:new Date().toISOString(),userAgent:navigator.userAgent.slice(0,150)})
-      });
-      return {bound:true,notified:true};
-    }
-    return {bound:true,notified:false,reason:'Could not get a notification token for this device.'};
-  }catch(err){
-    return {bound:true,notified:false,reason:'Notification setup failed: '+err.message};
-  }
-}
-
 async function checkPartnerStatus(){
   const contact=document.getElementById('p-check-contact').value.trim().toLowerCase();
   const wrap=document.getElementById('partner-result');
@@ -571,20 +541,16 @@ async function checkPartnerStatus(){
       return;
     }
 
-    // Approved — bind this device
+    // Approved — bind this device so future visits auto-fill their details
     const partnerId=match.partnerId;
     localStorage.setItem('ecss_partner_id',partnerId);
     localStorage.setItem('ecss_partner_name',match.name);
     boundPartnerId=partnerId;
 
-    wrap.innerHTML='<div class="card"><div class="empty"><i class="ti ti-loader-2 spin"></i> Approved — setting up this device…</div></div>';
-    const bindResult=await requestNotificationPermissionAndBind(partnerId);
-
     wrap.innerHTML=`<div class="card confirm-card">
       <div class="confirm-icon"><i class="ti ti-check"></i></div>
       <div style="font-size:13px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.5px">You're approved, ${esc(match.name)}</div>
-      <div class="confirm-meta" style="margin-top:8px">Partner ID: <b>${esc(partnerId)}</b>. This device is now linked to your account — future tickets from here will auto-fill your details.
-      ${bindResult.notified?' Notifications are turned on for this device.':' <br><span style="color:var(--warn)">'+esc(bindResult.reason||'')+'</span>'}</div>
+      <div class="confirm-meta" style="margin-top:8px">Partner ID: <b>${esc(partnerId)}</b>. This device is now linked to your account — future tickets from here will auto-fill your details.</div>
       <div class="confirm-actions"><button class="btn primary" style="width:auto" onclick="switchTab('raise')"><i class="ti ti-plus"></i> Raise a ticket</button></div>
     </div>`;
   }catch(err){
