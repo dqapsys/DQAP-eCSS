@@ -517,22 +517,24 @@ async function nextPartnerId(){
 function renderPartners(){
   const pending=partnerReqData.filter(r=>r.status==='Pending');
   const decided=partnerReqData.filter(r=>r.status!=='Pending');
+  const canManage=currentUserFullAccess;
   el('tab-partners').innerHTML=`
   <div class="card"><div class="card-header"><span>Pending registrations</span><span class="muted">${pending.length} awaiting review</span></div>
   <div class="table-wrap"><table><thead><tr><th>Name</th><th>Company</th><th>Phone</th><th>Requested</th><th>Action</th></tr></thead><tbody>
   ${pending.length?pending.map(r=>`<tr>
     <td><b>${esc(r.name)}</b></td><td>${esc(r.company)}</td><td>${esc(r.phone)}</td><td class="muted">${fmtDate(r.requestedAt)}</td>
-    <td style="display:flex;gap:6px"><button class="btn sm ok" onclick="approvePartner('${r.id}')"><i class="ti ti-check"></i>Approve</button><button class="btn sm bad" onclick="rejectPartner('${r.id}')"><i class="ti ti-x"></i>Reject</button></td>
+    <td>${canManage?`<div style="display:flex;gap:6px"><button class="btn sm ok" onclick="approvePartner('${r.id}')"><i class="ti ti-check"></i>Approve</button><button class="btn sm bad" onclick="rejectPartner('${r.id}')"><i class="ti ti-x"></i>Reject</button></div>`:'<span class="muted"><i class="ti ti-lock"></i> Admin only</span>'}</td>
   </tr>`).join(''):'<tr><td colspan="5" class="empty">No pending registrations.</td></tr>'}
   </tbody></table></div></div>
 
   <div class="card"><div class="card-header"><span>Reviewed history</span></div>
-  <div class="table-wrap"><table><thead><tr><th>Name</th><th>Company</th><th>Phone</th><th>Status</th><th>Partner ID</th><th>Reviewed</th></tr></thead><tbody>
+  <div class="table-wrap"><table><thead><tr><th>Name</th><th>Company</th><th>Phone</th><th>Status</th><th>Partner ID</th><th>Reviewed</th>${canManage?'<th>Action</th>':''}</tr></thead><tbody>
   ${decided.length?decided.map(r=>`<tr>
     <td><b>${esc(r.name)}</b></td><td>${esc(r.company)}</td><td>${esc(r.phone)}</td>
     <td><span class="badge ${r.status==='Approved'?'s-closed':'s-urgent'}">${esc(r.status)}</span></td>
     <td>${esc(r.partnerId||'-')}</td><td class="muted">${fmtDate(r.updatedAt)}</td>
-  </tr>`).join(''):'<tr><td colspan="6" class="empty">No history yet.</td></tr>'}
+    ${canManage?`<td>${r.status==='Approved'?`<button class="btn sm bad" onclick="removePartner('${r.id}','${esc(r.partnerId||'')}')"><i class="ti ti-user-x"></i>Remove</button>`:''}</td>`:''}
+  </tr>`).join(''):'<tr><td colspan="'+(canManage?7:6)+'" class="empty">No history yet.</td></tr>'}
   </tbody></table></div></div>`;
 }
 
@@ -550,7 +552,7 @@ async function approvePartner(reqId){
     });
     showToast(`Approved as ${partnerId}`);
   }catch(err){
-    showToast('Could not approve: '+err.message,'error');
+    showToast(err.code==='permission-denied'?"You don't have permission to approve partners.":'Could not approve: '+err.message,'error');
   }
 }
 
@@ -562,7 +564,21 @@ async function rejectPartner(reqId){
     });
     showToast('Registration rejected');
   }catch(err){
-    showToast('Could not reject: '+err.message,'error');
+    showToast(err.code==='permission-denied'?"You don't have permission to reject partners.":'Could not reject: '+err.message,'error');
+  }
+}
+
+async function removePartner(reqId,partnerId){
+  if(!confirm('Remove this partner? They will lose access — any device binding will need to be redone if they are re-approved later.'))return;
+  try{
+    const now=nowIso();
+    if(partnerId){
+      await db.collection(PARTNER_COL).doc(partnerId).update({status:'Removed',removedAt:now,removedBy:currentUser.email});
+    }
+    await db.collection(PARTNER_REQ_COL).doc(reqId).update({status:'Removed',updatedAt:now,reviewedBy:currentUser.email});
+    showToast('Partner removed');
+  }catch(err){
+    showToast(err.code==='permission-denied'?"You don't have permission to remove partners.":'Could not remove partner: '+err.message,'error');
   }
 }
 
