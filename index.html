@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   :root{--p:#006994;--pd:#004A68;--pl:#E4F1FA;--bg:#F4F6FA;--card:#fff;--t1:#111;--t2:#666;--bd:rgba(0,0,0,.11);--bds:rgba(0,0,0,.22);--rad:10px;--ok:#1B5E20;--warn:#E65100;--bad:#B71C1C;--oxide:#B5502F}
@@ -270,8 +271,45 @@ const PARTNER_COL='ecss_partners';
 const COUNTER_DOC=db.collection('ecss_settings').doc('ticket_counter');
 const PARTNER_COUNTER_DOC=db.collection('ecss_settings').doc('partner_counter');
 const DROPDOWN_DOC=db.collection('ecss_settings').doc('dropdown_options');
+const NOTIFY_RECIPIENTS_DOC=db.collection('ecss_settings').doc('notification_recipients');
 // TODO: replace with the deployed Cloud Run upload service URL once live
 const DRIVE_UPLOAD_URL='https://ecss-drive-upload-902896957641.asia-south1.run.app/upload';
+
+// TODO: fill in once EmailJS templates + public key are created (see Settings
+// tab for the exact template variable names to use when building each template).
+const EMAILJS_PUBLIC_KEY='5HDT4B76AYxVxx0hw';
+const EMAILJS_SERVICE_ID='service_hbeq0no';
+const EMAILJS_TEMPLATE_RAISED='template_ew30odk';
+if(window.emailjs)emailjs.init({publicKey:EMAILJS_PUBLIC_KEY});
+
+async function sendTicketRaisedEmail(ticket){
+  try{
+    if(EMAILJS_PUBLIC_KEY.startsWith('REPLACE')||EMAILJS_TEMPLATE_RAISED.startsWith('REPLACE'))return; // not configured yet
+    let recipients=[];
+    try{
+      const snap=await NOTIFY_RECIPIENTS_DOC.get();
+      if(snap.exists&&Array.isArray(snap.data().emails))recipients=snap.data().emails;
+    }catch(e){}
+    if(ticket.requesterEmail)recipients.push(ticket.requesterEmail);
+    recipients=[...new Set(recipients.filter(Boolean))];
+    if(!recipients.length)return;
+
+    await emailjs.send(EMAILJS_SERVICE_ID,EMAILJS_TEMPLATE_RAISED,{
+      to_email:recipients.join(','),
+      ticket_id:ticket.ticketId,
+      requester_name:ticket.requesterName,
+      company:ticket.requesterCompany,
+      phone:ticket.requesterPhone,
+      site:ticket.siteLocation,
+      system:ticket.systemType,
+      priority:ticket.priority,
+      status:ticket.status,
+      message:ticket.message
+    });
+  }catch(err){
+    console.warn('Ticket-raised email failed (ticket was still created fine):',err);
+  }
+}
 
 // Fallback options if the Settings doc hasn't been configured yet — Updesh can
 // change these live from the console's Settings tab without touching code.
@@ -416,7 +454,7 @@ async function submitTicket(){
     const attachments=await uploadAttachments(ticketId,company);
     const now=new Date().toISOString();
 
-    await db.collection(TICKET_COL).doc(ticketId).set({
+    const ticketDoc={
       ticketId,
       source:'DQAP-eCSS',
       subject:`${system} — ${site}`,
@@ -440,7 +478,9 @@ async function submitTicket(){
       partnerId:boundPartnerId||'',
       createdAt:now,
       updatedAt:now
-    });
+    };
+    await db.collection(TICKET_COL).doc(ticketId).set(ticketDoc);
+    sendTicketRaisedEmail(ticketDoc); // fire-and-forget — never blocks ticket creation on email failure
 
     document.getElementById('raise-form-wrap').style.display='none';
     document.getElementById('raise-confirm-wrap').style.display='block';
