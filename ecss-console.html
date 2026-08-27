@@ -174,14 +174,24 @@ const DEFAULT_URGENCY_OPTIONS=[
   {label:'Urgent — system down / critical impact',value:'Urgent'}
 ];
 
-// eCSS team — hardcoded for v1. Add/remove names here as the support roster changes.
-// (Move to a Firestore ecss_users collection later if this needs to be admin-editable.)
-const ECSS_TEAM = ['Updesh', 'Pratim', 'Chetan', 'Ravi', 'Keshav', 'Jawed/Shams'];
+const TEAM_ROSTER_DOC = db.collection('ecss_settings').doc('team_roster');
+// Fallback roster if the Settings doc hasn't been configured yet. Only Updesh's
+// email is known for certain — everyone else needs their real login email added
+// via Settings → Team Members before "My Tickets" filtering will work for them.
+const DEFAULT_TEAM_ROSTER=[
+  {name:'Updesh',email:'uv@dqap.in'},
+  {name:'Pratim',email:''},
+  {name:'Chetan',email:''},
+  {name:'Ravi',email:''},
+  {name:'Keshav',email:''},
+  {name:'Jawed/Shams',email:''}
+];
 // Settings tab (dropdown option management) is restricted to this account only.
 const SETTINGS_ADMIN_EMAIL = 'uv@dqap.in';
 
-let currentUser = null, ticketsData = [], ticketsUnsub = null, partnerReqData = [], partnerReqUnsub = null, activeTab = 'dashboard', activeFilter = 'all', selectedTicketId = '';
+let currentUser = null, ticketsData = [], ticketsUnsub = null, partnerReqData = [], partnerReqUnsub = null, activeTab = 'dashboard', activeFilter = 'all', ticketScope = 'mine', selectedTicketId = '';
 let settingsLoaded = false, systemOptionsLocal = [], urgencyOptionsLocal = [];
+let teamRoster = [], currentUserTeamName = '';
 
 /* ============ HELPERS ============ */
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
@@ -203,7 +213,7 @@ function durationText(start,end){
 }
 function statusBadge(s){const k=statusKey(s);return `<span class="badge s-${k}">${esc(k.replace(/\b\w/g,m=>m.toUpperCase()))}</span>`}
 function priorityBadge(p){const k=norm(p||'Medium');return `<span class="badge s-${k}">${esc(String(p||'Medium').toUpperCase())}</span>`}
-function teamOptions(selected=''){return ECSS_TEAM.map(n=>`<option value="${esc(n)}" ${norm(n)===norm(selected)?'selected':''}>${esc(n)}</option>`).join('')}
+function teamOptions(selected=''){return teamRoster.map(m=>m.name).map(n=>`<option value="${esc(n)}" ${norm(n)===norm(selected)?'selected':''}>${esc(n)}</option>`).join('')}
 
 /* ============ AUTH ============ */
 function doLogin(){
@@ -244,6 +254,25 @@ function refreshAttentionIndicators(){
   }
 }
 
+async function loadTeamRoster(){
+  try{
+    const snap=await TEAM_ROSTER_DOC.get();
+    if(snap.exists&&Array.isArray(snap.data().members)&&snap.data().members.length){
+      teamRoster=snap.data().members.map(m=>({...m}));
+    }else{
+      teamRoster=DEFAULT_TEAM_ROSTER.map(m=>({...m}));
+    }
+  }catch(err){
+    console.warn('Could not load team roster, using defaults:',err);
+    teamRoster=DEFAULT_TEAM_ROSTER.map(m=>({...m}));
+  }
+  const match=teamRoster.find(m=>m.email&&norm(m.email)===norm(currentUser.email));
+  currentUserTeamName=match?match.name:'';
+  // If this login isn't linked to a roster name yet, there's nothing to scope
+  // "My Tickets" to — fall back to showing everything rather than an empty list.
+  if(!currentUserTeamName)ticketScope='all';
+}
+
 auth.onAuthStateChanged(user=>{
   if(user){
     currentUser=user;
@@ -251,8 +280,10 @@ auth.onAuthStateChanged(user=>{
     el('appContainer').style.display='block';
     el('currentUserName').textContent=user.email;
     el('settingsTabBtn').style.display=isSettingsAdmin()?'flex':'none';
-    startTicketsListen();
-    startPartnerReqListen();
+    loadTeamRoster().then(()=>{
+      startTicketsListen();
+      startPartnerReqListen();
+    });
   }else{
     currentUser=null;
     el('appContainer').style.display='none';
@@ -286,7 +317,10 @@ function startTicketsListen(){
   if(ticketsUnsub)ticketsUnsub();
   ticketsUnsub=db.collection(TICKET_COL).onSnapshot(sn=>{
     ticketsData=sn.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>timeValue(b.updatedAt)-timeValue(a.updatedAt));
-    pendingTicketsCount=ticketsData.filter(t=>statusKey(t.status)==='pending').length;
+    // Badge reflects "my" pending tickets once this login is linked to a
+    // roster name; falls back to the org-wide count if it isn't (e.g. before
+    // Settings → Team Members has been configured for this account).
+    pendingTicketsCount=ticketsData.filter(t=>statusKey(t.status)==='pending'&&(!currentUserTeamName||norm(t.assignee)===norm(currentUserTeamName))).length;
     refreshAttentionIndicators();
     renderAll();
   },err=>showToast('Could not load tickets: '+err.message,'error'));
@@ -340,10 +374,19 @@ function renderDashboard(){
 }
 
 function renderTickets(){
-  const filtered=activeFilter==='all'?ticketsData:ticketsData.filter(t=>statusKey(t.status)===activeFilter);
+  const scoped=(ticketScope==='mine'&&currentUserTeamName)?ticketsData.filter(t=>norm(t.assignee)===norm(currentUserTeamName)):ticketsData;
+  const filtered=activeFilter==='all'?scoped:scoped.filter(t=>statusKey(t.status)===activeFilter);
   const selected=filtered.find(t=>t.id===selectedTicketId)||filtered[0]||null;
   if(selected)selectedTicketId=selected.id;
-  el('tab-tickets').innerHTML=`<div class="filters">
+
+  const unlinkedNotice=(!currentUserTeamName)?`<div class="disclaimer" style="margin-bottom:12px"><i class="ti ti-alert-triangle"></i> Your login isn't linked to a team member name yet, so "My Tickets" can't be scoped for you — showing all tickets. Ask the admin to add your email under Settings → Team Members.</div>`:'';
+
+  el('tab-tickets').innerHTML=`${unlinkedNotice}
+  <div class="filters" style="margin-bottom:8px">
+    <button class="btn sm ${ticketScope==='mine'?'active':''}" onclick="setTicketScope('mine')" ${!currentUserTeamName?'disabled':''}><i class="ti ti-user"></i> My Tickets</button>
+    <button class="btn sm ${ticketScope==='all'?'active':''}" onclick="setTicketScope('all')"><i class="ti ti-users"></i> All Tickets</button>
+  </div>
+  <div class="filters">
     ${['all','pending','started','closed'].map(f=>`<button class="btn sm ${activeFilter===f?'active':''}" onclick="setFilter('${f}')">${f==='all'?'All':f.replace(/\b\w/g,m=>m.toUpperCase())}</button>`).join('')}
   </div>
   <div class="queue-layout">
@@ -352,6 +395,7 @@ function renderTickets(){
   </div>`;
 }
 function setFilter(f){activeFilter=f;renderTickets()}
+function setTicketScope(s){ticketScope=s;selectedTicketId='';renderTickets()}
 function selectTicket(id){selectedTicketId=id;renderTickets()}
 
 function ticketRow(t){
@@ -524,6 +568,14 @@ async function ensureSettingsLoaded(){
 function renderSettings(){
   el('tab-settings').innerHTML=`
   <div class="card">
+    <div class="card-header"><span>Team members</span></div>
+    <div class="card-sub">Links each staff member's login email to the name used in "Assign to." This is what makes "My Tickets" work — without a matching email here, that person will only ever see the full ticket list, not just their own.</div>
+    <div id="teamRosterList"></div>
+    <button class="btn sm ghost" onclick="addTeamMember()"><i class="ti ti-plus"></i> Add team member</button>
+    <div style="margin-top:12px"><button class="btn primary" id="saveTeamBtn" onclick="saveTeamRoster()"><i class="ti ti-device-floppy"></i> Save Team Members</button></div>
+  </div>
+
+  <div class="card">
     <div class="card-header"><span>System options</span></div>
     <div class="card-sub">Shown in the "System" dropdown on the public ticket form. Add, rename, reorder by re-typing, or remove — then Save.</div>
     <div id="systemOptionsList"></div>
@@ -539,8 +591,42 @@ function renderSettings(){
 
   <button class="btn primary" id="saveSettingsBtn" onclick="saveDropdownSettings()"><i class="ti ti-device-floppy"></i> Save Settings</button>
   `;
+  renderTeamRosterList();
   renderSystemOptionsList();
   renderUrgencyOptionsList();
+}
+
+function renderTeamRosterList(){
+  const wrap=el('teamRosterList');
+  wrap.innerHTML=teamRoster.length?teamRoster.map((m,i)=>`
+    <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;flex-wrap:wrap">
+      <input value="${esc(m.name)}" placeholder="Name (shown in Assign to)" oninput="updateTeamMember(${i},'name',this.value)" style="width:160px">
+      <input value="${esc(m.email)}" placeholder="Login email" oninput="updateTeamMember(${i},'email',this.value)" style="flex:1;min-width:200px">
+      <button class="btn sm bad" onclick="removeTeamMember(${i})"><i class="ti ti-trash"></i></button>
+    </div>`).join(''):'<div class="empty">No team members yet — add one below.</div>';
+}
+function updateTeamMember(i,field,val){teamRoster[i][field]=val;}
+function removeTeamMember(i){teamRoster.splice(i,1);renderTeamRosterList();}
+function addTeamMember(){teamRoster.push({name:'',email:''});renderTeamRosterList();}
+
+async function saveTeamRoster(){
+  const btn=el('saveTeamBtn');
+  const clean=teamRoster.map(m=>({name:String(m.name||'').trim(),email:String(m.email||'').trim().toLowerCase()})).filter(m=>m.name);
+  if(!clean.length){showToast('Add at least one team member.','error');return;}
+
+  btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2 spin"></i> Saving…';
+  try{
+    await TEAM_ROSTER_DOC.set({members:clean,updatedAt:nowIso(),updatedBy:currentUser.email},{merge:true});
+    teamRoster=clean;
+    const match=teamRoster.find(m=>m.email&&norm(m.email)===norm(currentUser.email));
+    currentUserTeamName=match?match.name:'';
+    renderTeamRosterList();
+    showToast('Team members saved.');
+  }catch(err){
+    showToast('Could not save team members: '+err.message,'error');
+  }finally{
+    btn.disabled=false;btn.innerHTML='<i class="ti ti-device-floppy"></i> Save Team Members';
+  }
 }
 
 function renderSystemOptionsList(){
