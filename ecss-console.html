@@ -12,6 +12,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   :root{--p:#006994;--pd:#004A68;--pl:#E4F1FA;--bg:#F4F6FA;--card:#fff;--t1:#111;--t2:#666;--bd:rgba(0,0,0,.11);--bds:rgba(0,0,0,.22);--rad:10px;--ok:#1B5E20;--warn:#E65100;--bad:#B71C1C;--oxide:#B5502F}
@@ -190,6 +191,39 @@ const DEFAULT_TEAM_ROSTER=[
 // Settings tab (dropdown option management) is restricted to this account only.
 const SETTINGS_ADMIN_EMAIL = 'uv@dqap.in';
 
+const NOTIFY_RECIPIENTS_DOC = db.collection('ecss_settings').doc('notification_recipients');
+// TODO: fill in once EmailJS templates + public key are created.
+const EMAILJS_PUBLIC_KEY='5HDT4B76AYxVxx0hw';
+const EMAILJS_SERVICE_ID='service_hbeq0no';
+const EMAILJS_TEMPLATE_CLOSED='template_tp10cme';
+if(window.emailjs)emailjs.init({publicKey:EMAILJS_PUBLIC_KEY});
+let notifyRecipientsLocal=[];
+
+async function sendTicketClosedEmail(t){
+  try{
+    if(EMAILJS_PUBLIC_KEY.startsWith('REPLACE')||EMAILJS_TEMPLATE_CLOSED.startsWith('REPLACE'))return; // not configured yet
+    let recipients=[...notifyRecipientsLocal];
+    if(t.requesterEmail)recipients.push(t.requesterEmail);
+    recipients=[...new Set(recipients.filter(Boolean))];
+    if(!recipients.length)return;
+
+    await emailjs.send(EMAILJS_SERVICE_ID,EMAILJS_TEMPLATE_CLOSED,{
+      to_email:recipients.join(','),
+      ticket_id:t.ticketId,
+      requester_name:t.requesterName,
+      company:t.requesterCompany,
+      phone:t.requesterPhone,
+      site:t.siteLocation,
+      system:t.systemType,
+      priority:t.priority,
+      status:'Closed',
+      message:t.message
+    });
+  }catch(err){
+    console.warn('Ticket-closed email failed (ticket was still closed fine):',err);
+  }
+}
+
 let currentUser = null, ticketsData = [], ticketsUnsub = null, partnerReqData = [], partnerReqUnsub = null, activeTab = 'dashboard', activeFilter = 'all', ticketScope = 'mine', selectedTicketId = '';
 let settingsLoaded = false, systemOptionsLocal = [], urgencyOptionsLocal = [];
 let teamRoster = [], currentUserTeamName = '', currentUserFullAccess = false;
@@ -281,6 +315,16 @@ async function loadTeamRoster(){
   ticketScope=(currentUserTeamName&&!currentUserFullAccess)?'mine':(currentUserTeamName?'mine':'all');
 }
 
+async function loadNotifyRecipients(){
+  try{
+    const snap=await NOTIFY_RECIPIENTS_DOC.get();
+    notifyRecipientsLocal=(snap.exists&&Array.isArray(snap.data().emails))?[...snap.data().emails]:[];
+  }catch(err){
+    console.warn('Could not load notification recipients:',err);
+    notifyRecipientsLocal=[];
+  }
+}
+
 auth.onAuthStateChanged(user=>{
   if(user){
     currentUser=user;
@@ -288,7 +332,7 @@ auth.onAuthStateChanged(user=>{
     el('appContainer').style.display='block';
     el('currentUserName').textContent=user.email;
     el('settingsTabBtn').style.display=isSettingsAdmin()?'flex':'none';
-    loadTeamRoster().then(()=>{
+    Promise.all([loadTeamRoster(),loadNotifyRecipients()]).then(()=>{
       startTicketsListen();
       startPartnerReqListen();
     });
@@ -480,6 +524,7 @@ async function saveTicketUpdate(id){
 
   try{
     await db.collection(TICKET_COL).doc(id).update(update);
+    if(status==='Closed'&&t.status!=='Closed')sendTicketClosedEmail({...t,...update}); // fire-and-forget
     el('detail-reply').value='';
     showToast('Ticket updated');
   }catch(err){
@@ -497,6 +542,7 @@ async function closeTicket(id){
       timeToCloseMinutes:Math.round((timeValue(now)-timeValue(t.createdAt))/60000),
       audit
     });
+    sendTicketClosedEmail(t); // fire-and-forget — never blocks the close on email failure
     showToast('Ticket closed');
   }catch(err){
     showToast(err.code==='permission-denied'?"You don't have permission to close this ticket.":'Could not close ticket: '+err.message,'error');
@@ -614,6 +660,14 @@ function renderSettings(){
   </div>
 
   <div class="card">
+    <div class="card-header"><span>Email notifications</span></div>
+    <div class="card-sub">These addresses get emailed every time a ticket is raised or closed, in addition to the requester's own email (if they gave one). Add Updesh's and Pratim's email here.</div>
+    <div id="notifyRecipientsList"></div>
+    <button class="btn sm ghost" onclick="addNotifyRecipient()"><i class="ti ti-plus"></i> Add recipient</button>
+    <div style="margin-top:12px"><button class="btn primary" id="saveNotifyBtn" onclick="saveNotifyRecipients()"><i class="ti ti-device-floppy"></i> Save Notification Recipients</button></div>
+  </div>
+
+  <div class="card">
     <div class="card-header"><span>System options</span></div>
     <div class="card-sub">Shown in the "System" dropdown on the public ticket form. Add, rename, reorder by re-typing, or remove — then Save.</div>
     <div id="systemOptionsList"></div>
@@ -630,6 +684,7 @@ function renderSettings(){
   <button class="btn primary" id="saveSettingsBtn" onclick="saveDropdownSettings()"><i class="ti ti-device-floppy"></i> Save Settings</button>
   `;
   renderTeamRosterList();
+  renderNotifyRecipientsList();
   renderSystemOptionsList();
   renderUrgencyOptionsList();
 }
@@ -675,6 +730,34 @@ async function saveTeamRoster(){
     showToast('Could not save team members: '+err.message,'error');
   }finally{
     btn.disabled=false;btn.innerHTML='<i class="ti ti-device-floppy"></i> Save Team Members';
+  }
+}
+
+function renderNotifyRecipientsList(){
+  const wrap=el('notifyRecipientsList');
+  wrap.innerHTML=notifyRecipientsLocal.length?notifyRecipientsLocal.map((email,i)=>`
+    <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+      <input value="${esc(email)}" placeholder="name@dqap.in" oninput="updateNotifyRecipient(${i},this.value)" style="flex:1">
+      <button class="btn sm bad" onclick="removeNotifyRecipient(${i})"><i class="ti ti-trash"></i></button>
+    </div>`).join(''):'<div class="empty">No recipients yet — add one below.</div>';
+}
+function updateNotifyRecipient(i,val){notifyRecipientsLocal[i]=val;}
+function removeNotifyRecipient(i){notifyRecipientsLocal.splice(i,1);renderNotifyRecipientsList();}
+function addNotifyRecipient(){notifyRecipientsLocal.push('');renderNotifyRecipientsList();}
+
+async function saveNotifyRecipients(){
+  const btn=el('saveNotifyBtn');
+  const clean=[...new Set(notifyRecipientsLocal.map(e=>String(e||'').trim().toLowerCase()).filter(Boolean))];
+  btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2 spin"></i> Saving…';
+  try{
+    await NOTIFY_RECIPIENTS_DOC.set({emails:clean,updatedAt:nowIso(),updatedBy:currentUser.email});
+    notifyRecipientsLocal=clean;
+    renderNotifyRecipientsList();
+    showToast('Notification recipients saved.');
+  }catch(err){
+    showToast('Could not save recipients: '+err.message,'error');
+  }finally{
+    btn.disabled=false;btn.innerHTML='<i class="ti ti-device-floppy"></i> Save Notification Recipients';
   }
 }
 
